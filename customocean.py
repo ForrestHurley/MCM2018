@@ -41,10 +41,10 @@ class waves:
         return gradient
 
     def getWaveAtTimes(self,t):
-        return self.wave(t,*self.waveParams)
+        return self.wave(t,*self.waveParams).T
 
     def getWaveNorms(self,t):
-        return self.waveNorms(t,*self.waveParams)
+        return self.waveNorms(t,*self.waveParams).T
 
     def plotWaves(self):
         fig = plt.figure()
@@ -52,7 +52,7 @@ class waves:
         plt.subplots_adjust(0,0,1,1)
         fig.patch.set_color('#1a5a98')
 
-        t = self.getPrecalculatedPoints()
+        t = self.getPrecalculatedPoints().T
 
         ax.plot_surface(t[0],t[1],t[2])
         ax.plot_wireframe(t[0],t[1],t[2], color='white',linewidth=0.5)
