@@ -52,6 +52,19 @@ class waves:
         plt.subplots_adjust(0,0,1,1)
         fig.patch.set_color('#1a5a98')
 
+        t = getWaveAtTimes(self,t)
+
+        ax.plot_surface(t[0],t[1],t[2])
+        ax.plot_wireframe(t[0],t[1],t[2], color='white',linewidth=0.5)
+
+        minT = np.min(t,axis=1)
+        maxT = np.max(t,axis=1)
+        
+        ax.axis("off")
+        ax.set_xlim(minT[0],maxT[0])
+        ax.set_ylim(minT[1],maxT[1])
+        ax.set_zlim(minT[2],maxT[2])
+        plt.show()
 
 if __name__ == "__main__":
 	
