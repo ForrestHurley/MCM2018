@@ -3,19 +3,56 @@ import matplotlib
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 import scipy.optimize
+from scipy.interpolate import LinearNDInterpolator
 
 class waves:
 
     def __init__(self):
         self.wave=self.summedTrochoids
         self.waveNorms=self.summedTrochoidNorms
-        self.waveParams=([(1,2,0.3),(0,1,0.6),(0.5,1,0.4)],)
+        self.waveParams=([(0,1,0.6),(.57,0.6,0.5),(1,1.2,0.3)],)
         self.resolution=20
-        self.waverange=((0,10),(0,10))
-        self.calculated_wave=None
-        self.calculated_norms=None
+        self.waverange=(0,10)
+        self.__calculated_wave=None
+        self.__calculated_norms=None
+
+        self.__recalculate_norm_interp=True
 
         self.recalculate_surface=True
+
+    def __calculate_wave_norm(self):
+        x = np.linspace(*self.waverange,self.resolution)
+        y = np.linspace(*self.waverange,self.resolution)
+
+        x,y = np.meshgrid(x,y)
+      
+        t = [x.flatten(),y.flatten()]
+
+        self.__calculated_wave = self.getWave(t).reshape(3,*x.shape)
+        self.__calculated_norms = self.getWaveNorms(t).reshape(5,*x.shape)
+
+        self.__recalculate_norm_interp=True
+
+        self.__recalculate_surface = False
+
+    @property
+    def norms_interpolator(self):
+        if self.__recalculate_norm_interp:
+            reshaped_norms = self.calculated_norms.reshape(5,-1)
+            self.__norms_interpolator = LinearNDInterpolator(reshaped_norms[:2].T,reshaped_norms[2:].T,fill_value=0)
+        return self.__norms_interpolator
+
+    @property
+    def calculated_wave(self):
+        if self.recalculate_surface or _calculated_wave is None:
+            self.__calculate_wave_norm()
+        return self.__calculated_wave
+    
+    @property
+    def calculated_norms(self):
+        if self.recalculate_surface or _calculated_wave is None:
+            self.__calculate_wave_norm()
+        return self.__calculated_norms
 
     @property
     def wave(self):
@@ -118,8 +155,7 @@ class waves:
         return surface
 
     def trochoid3DNorms(self,t=np.array([[0],[0]]),theta=0, R=0.5, d=0.5):
-        norms=self.extrude(self.trochoidUnextrudedNormals,t,theta,tBoundFunc=self.trochoid,funcParams=(R,d),tBoundFuncArgs=(R,d))
-        #print(norms)
+        norms=self.extrude(self.trochoidUnextrudedNormals,t,theta,tBoundFunc=self.trochoid,funcParams=(R,d,theta),tBoundFuncArgs=(R,d))
         return norms
 
     def summedTrochoids(self,t=np.array([[0],[0]]),trochoidParameters=[(0,1,1)]):
@@ -132,8 +168,6 @@ class waves:
         surface_norms = np.array([self.trochoid3DNorms(t,*params) for params in trochoidParameters])
         summed_norms = np.sum(surface_norms[:,2:4],axis=0)
         new_norms = np.array([*surface_norms[0][:2],*summed_norms,surface_norms[0][4]])
-        print(new_norms.shape)
-        print(surface_norms[0][4].shape)
         return new_norms
 
     def numericNormal(self,t):
@@ -148,28 +182,42 @@ class waves:
         return self.waveNorms(t,*self.waveParams)
 
     def precalculatedWaveAndNorms(self,transpose=True):
-        if self.calculated_wave == None or self.calculated_norms == None or self.__recalculate_surface:
-            x = np.linspace(*self.waverange[0],self.resolution)
-            y = np.linspace(*self.waverange[1],self.resolution)
-
-            x,y = np.meshgrid(x,y)
-          
-            t = [x.flatten(),y.flatten()]
-
-            self.calculated_wave = self.getWave(t).reshape(3,*x.shape)
-            self.calculated_norms = self.getWaveNorms(t).reshape(5,*x.shape)
-
-            self.__recalculate_surface = False
-
         if transpose:
             return self.calculated_wave.reshape(3,-1).T, self.calculated_norms.reshape(5,-1).T
 
         return self.calculated_wave, self.calculated_norms
 
-    def randomPointsFromVector(self,vector):
+    def randomPointsFromVectors(self,vectors): #uses nx3 array for the vectors
         points, norms = self.precalculatedWaveAndNorms(transpose=False)
 
-        projected
+        random_locs = np.random.uniform(*self.waverange,(vectors.shape[0],3))
+
+        e1_list, e2_list = self.orthogonalsFromNormals(vectors)
+
+        projected_random = [np.sum(e1_list*random_locs,axis=1),np.sum(e2_list*random_locs,axis=1)]
+
+        return np.array(projected_random).T
+
+    def orthogonalsFromNormals(self,normals):#uses nx3 array for normals
+        e1 = np.array([np.ones(normals.shape[0]),-normals[:,0]/normals[:,1],np.zeros(normals.shape[0])]).T
+        nan_rows = np.where(np.isnan(e1[:,1]))
+      
+        e1[nan_rows] = [0,1,0]
+
+        e2 = np.cross(normals,e1)
+
+        e1 = e1/np.expand_dims(np.linalg.norm(e1,axis=1),axis=-1)
+        e2 = e2/np.expand_dims(np.linalg.norm(e2,axis=1),axis=-1)
+
+        return e1, e2
+
+    def getNormalAtPoints(self,points):
+        return self.norms_interpolator(points)
+
+    def getRandomNormals(self,vectors):
+        points = self.randomPointsFromVectors(vectors)
+
+        return self.getNormalAtPoints(points)
 
     def plot_waves(self):
         fig = plt.figure()
@@ -179,7 +227,7 @@ class waves:
         t,norms = self.precalculatedWaveAndNorms(transpose=False)
         #print(norms.shape)
 
-        colors = np.sqrt(np.sum(np.square(norms[2:3]),axis=0))
+        colors = np.sqrt(np.sum(np.square(norms[2:4]),axis=0))
         #[print(val[0]) for val in colors]
         minn, maxx = colors.min(), colors.max()
         normColors = matplotlib.colors.Normalize(minn,maxx)
@@ -202,3 +250,5 @@ class waves:
 if __name__ == "__main__":
     wave_instance = waves()
     wave_instance.plot_waves()
+    vector_list = np.array([[0,0,-1]])
+    print(wave_instance.getRandomNormals(vector_list))
