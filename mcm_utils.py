@@ -15,6 +15,10 @@ def mirror(rays,normal):
     out = rays - 2*np.expand_dims(dot(rays,normal)/dot(normal,normal),axis=1)*normal
     return out
 
+def random_removal(probability,values):
+    indices = np.where(np.random.rand(values[0].shape[0]) < probability)
+    return [val[indices] for val in values]
+
 def sphericals_from_vector(vectors):
     r=np.linalg.norm(vectors,axis=1)
     phi=np.arctan2(vectors.T[1],vectors.T[0])

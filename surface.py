@@ -64,13 +64,17 @@ class sphere(default_surface):
 
     def normal_from_surface(self,intersection_location):
         return intersection_location - self.center
+
 class bumpy_sphere(sphere):
     def __init__(self,material=mat.default_mat,center=[0,0,0],radius=1):
         super().__init__(material,center,radius)
+
     def normal_intersection(self,ray_origin,ray_direction):
         return super().intersection_point(self,ray_origin,ray_direction)
+
     def height_of_sphere(self,points):
-        return self.radius+spherical_coordinates(points)[1]
+        return self.radius+sphericals_from_vectors(points)[1]
+
     def intersection_point(self,ray_origin,ray_direction):
         guess=self.normal_intersection(ray_origin,ray_direction)
         
