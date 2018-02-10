@@ -16,8 +16,8 @@ class default_surface:
         intersections = self.intersection_point(ray_origins,ray_directions)
         world_normals, material_normals = self.normal(ray_directions,intersections)
 
-        attenuation = self.attenuate_rays(ray_directions,material_normals,intersections)
-        intersections, world_normals, ray_directions = attenuation(intersections, world_normals, ray_directions)
+        intersections, world_normals, ray_directions = self.attenuate_rays(ray_directions,material_normals,intersections)
+        # intersections, world_normals, ray_directions = attenuation(intersections, world_normals, ray_directions)
 
         new_directions = mcm_utils.mirror(ray_directions,world_normals)
 
@@ -36,7 +36,7 @@ class default_surface:
         return world_norm, mat_norm
 
     def attenuate_rays(self,ray_direction,material_normal,intersection_location):
-        return self.material.attenuate()
+        return self.material.attenuate(ray_direction, material_normal, intersection_location)
 
 
 class sphere(default_surface):
