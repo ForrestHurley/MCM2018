@@ -94,7 +94,7 @@ class precalculated_waves:
 
 class waves:
 
-    def __init__(self,wave_energy=4,wave_count=8,max_shape=0.5):
+    def __init__(self,wave_energy=4,wave_count=10,max_shape=0.5):
         self.max_shape = max_shape
         self.wave_count = wave_count
         self.wave_energy = wave_energy
@@ -103,6 +103,7 @@ class waves:
 
         self.wave=self.summedTrochoids
         self.waveNorms=self.summedTrochoidNorms
+        self.velocity = self.summedTrochoidVels
         #self.waveParams=([(0,1,0.6),(.57,0.6,0.5),(1,1.2,0.3)],)
         self.set_random_wave_params()
         
@@ -139,6 +140,7 @@ class waves:
 
         self.__calculated_wave = self.getWave(t).reshape(3,*x.shape)
         self.__calculated_norms = self.getWaveNorms(t).reshape(5,*x.shape)
+        self.__calculated_vels = self.getVels(t).reshape(5,*x.shape)
 
         self.__recalculate_norm_interp=True
 
@@ -153,13 +155,13 @@ class waves:
 
     @property
     def calculated_wave(self):
-        if self.recalculate_surface or _calculated_wave is None:
+        if self.recalculate_surface or __calculated_wave is None:
             self.__calculate_wave_norm()
         return self.__calculated_wave
     
     @property
     def calculated_norms(self):
-        if self.recalculate_surface or _calculated_wave is None:
+        if self.recalculate_surface or __calculated_norms is None:
             self.__calculate_wave_norm()
         return self.__calculated_norms
 
@@ -170,6 +172,16 @@ class waves:
     @property
     def waveNorms(self):
         return self.__waveNorms
+
+    @property
+    def velocity(self):
+        return self.__velocity
+
+    @property
+    def calculated_vels(self):
+        if self.recalculate_surface or __calculated_vels is None:
+            self.__calculate_wave_norm()
+        return self.__calculated_vels
 
     @property
     def waveParams(self):
@@ -187,6 +199,11 @@ class waves:
     def wave(self,wave):
         self.__recalculate_surface=True
         self.__wave = wave
+
+    @velocity.setter
+    def velocity(self,velocity):
+        self.__recalculate_surface=True
+        self.__velocity = velocity
 
     @waveNorms.setter
     def waveNorms(self,waveNorms):
@@ -213,9 +230,22 @@ class waves:
         y = d*np.cos(t)+offset[1]
         return x, y
 
+
     def trochoidNormal(self,t=np.array([0]),R=0.3,d=1,offset=[0,0]):
         normals = np.clip(np.broadcast_arrays(np.nan_to_num(d*np.sin(t)/(d*np.cos(t)-R)),1),-6,6)
         return normals
+
+    def trochoidUnextrudedVels(self,t=np.array([0]),R=0.3,d=1,angle=0,offset=[0,0]):
+        initial = self.trochoidNormal(t,R,d,offset)
+        initial = mcm_utils.normalize(initial.T).T
+
+        wave_length = 2*np.pi*R
+        phase_speed = np.sqrt(9.8/2/np.pi*wave_length)
+
+        vels = phase_speed*np.array(np.broadcast_arrays(np.cos(angle)*initial[0],
+                                                        np.sin(angle)*initial[0],
+                                                        initial[1]))
+        return t, vels
 
     def trochoidUnextrudedNormals(self,t=np.array([0]),R=0.3,d=1,angle=0,offset=[0,0]):
         initial = self.trochoidNormal(t,R,d,offset)
@@ -267,6 +297,10 @@ class waves:
         norms=self.extrude(self.trochoidUnextrudedNormals,t,theta,tBoundFunc=self.trochoid,funcParams=(R,d,theta, offset),tBoundFuncArgs=(R, d, offset))
         return norms
 
+    def trochoid3DVels(self,t=np.array([[0],[0]]),theta=0, R=0.5, d=0.5, offset = [0,0]):
+        vels = self.extrude(self.trochoidUnextrudedVels,t,theta,tBoundFunc=self.trochoid,funcParams=(R,d,theta,offset),tBoundFuncArgs=(R, d, offset))
+        return vels
+
     def summedTrochoids(self,t=np.array([[0],[0]]),trochoidParameters=[(0,1,1)]):
         #print(*trochoidParameters)
         surfaces = np.array([self.trochoid3D(t,*params) for params in trochoidParameters])
@@ -280,6 +314,12 @@ class waves:
         new_norms = np.array([*surface_norms[0][:2],*summed_norms,surface_norms[0][4]])
         return new_norms
 
+    def summedTrochoidVels(self,t=np.array([[0],[0]]),trochoidParameters=[(0,1,1)]):
+        surface_vels = np.array([self.trochoid3DVels(t,*params) for params in trochoidParameters])
+        summed_vels = np.sum(surface_vels[:,2:5],axis=0)
+        new_vels = np.array([*surface_vels[0][:2],*summed_vels])
+        return new_vels
+
     def numericNormal(self,t):
         gradient = np.gradient(self.wave(t),t)
         gradient.append(np.negative(np.ones(gradient[0].shape)))
@@ -287,6 +327,9 @@ class waves:
 
     def getWave(self,t):
         return self.wave(t,*self.waveParams)
+
+    def getVels(self,t):
+        return self.velocity(t,*self.waveParams)
 
     def smooth_normals(self,initial_norms):
         initial_norms[2:4] = self.normal_smoothing_factor*initial_norms[2:4]
@@ -296,12 +339,6 @@ class waves:
         initial_norms = self.waveNorms(t,*self.waveParams)
         new_norms = self.smooth_normals(initial_norms)
         return new_norms
-
-    def precalculatedWaveAndNorms(self,transpose=True):
-        if transpose:
-            return self.calculated_wave.reshape(3,-1).T, self.calculated_norms.reshape(5,-1).T
-
-        return self.calculated_wave, self.calculated_norms
 
     def randomPointsFromVectors(self,vectors): #uses nx3 array for the vectors
         points, norms = self.precalculatedWaveAndNorms(transpose=False)
@@ -330,10 +367,10 @@ class waves:
         ax = fig.add_subplot(111, projection='3d', facecolor='#1a5a98')
         fig.patch.set_color('#1a5a98')
 
-        t,norms = self.precalculatedWaveAndNorms(transpose=False)
+        t,norms,vels = self.calculated_wave,self.calculated_norms,self.calculated_vels
         #print(norms.shape)
 
-        colors = np.sqrt(np.sum(np.square(norms[2:4]),axis=0))
+        colors = np.sqrt(np.sum(np.square(vels[2:5]),axis=0))
         #[print(val[0]) for val in colors]
         minn, maxx = colors.min(), colors.max()
         normColors = matplotlib.colors.Normalize(minn,maxx)
