@@ -2,6 +2,7 @@ import numpy as np
 from customocean import waves
 import scipy
 import mcm_utils
+from phys_utils import *
 
 class default_mat:
     def __init__(self,albedo=0.9):
@@ -22,6 +23,10 @@ class simpleWater(default_mat):
 
     def normals(self,direction,location):
         return self.water_model.getRandomNormals(direction).T
+
+    def attenuate(self):
+        def f(*args):
+            
 
 class simpleAtmosphere(default_mat):
     pass
