@@ -11,7 +11,7 @@ from heatmap import heatmap
 
 class atmosphere:
     def __init__(self):
-        self.number_rays = 10000
+        self.number_rays = 1000
         self.ray_start = [200,0,0]
         self.ray_direction = [1,1,0]
    
@@ -63,21 +63,17 @@ class atmosphere:
         return np.amax(self.heatmap.intensity*(100/self.number_rays))
 
     def simulate(self,iterations):
-        out=np.zeros((int(iterations/2),30,30))
         for i in range(iterations):
             self.iter += 1
             
             if self.towards_sky:
                 self.heatmap.update_regions(self.ray_origins)
-                out[int(i/2)]=self.heatmap.intensity
-                image=plt.imshow(self.heatmap.intensity)
                 self.iterate_rays(self.atmos_surface)
             else:
                 self.iterate_rays(self.ground_surface)
 
             self.towards_sky = not self.towards_sky
-        result=np.concatenate(out)
-        np.savetxt('heatmap.csv',result,delimiter=',')
+        #np.savetxt('heatmap.csv',result,delimiter=',')
     def draw_sphere(self,ax,radius=200):
         # draw sphere
         u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
@@ -101,3 +97,4 @@ if __name__=="__main__":
     world = atmosphere()
     world.simulate(30)
     world.draw_from_log()
+    world.heatmap.visualize_intensities()
