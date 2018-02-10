@@ -191,13 +191,14 @@ class waves:
     def randomPointsFromVectors(self,vectors): #uses nx3 array for the vectors
         points, norms = self.precalculatedWaveAndNorms(transpose=False)
 
-        random_locs = np.random.uniform(*self.waverange,(vectors.shape[0],3))
+        random_locs = np.random.uniform(*self.waverange,(vectors.shape[0],2))
 
-        e1_list, e2_list = mcm_utils.orthogonalsFromNormals(np.squeeze(vectors,axis=2))
+        return random_locs
+        #e1_list, e2_list = mcm_utils.orthogonalsFromNormals(vectors)
 
-        projected_random = [np.sum(e1_list*random_locs,axis=1),np.sum(e2_list*random_locs,axis=1)]
+        #projected_random = [np.sum(e1_list*random_locs,axis=1),np.sum(e2_list*random_locs,axis=1)]
 
-        return np.array(projected_random).T
+        #return np.array(projected_random).T
 
     def getNormalAtPoints(self,points):
         return self.norms_interpolator(points)
@@ -205,7 +206,9 @@ class waves:
     def getRandomNormals(self,vectors):
         points = self.randomPointsFromVectors(vectors)
 
-        return self.getNormalAtPoints(points)
+        norms = self.getNormalAtPoints(points)
+
+        return norms
 
     def plot_waves(self):
         fig = plt.figure()
@@ -237,6 +240,6 @@ class waves:
 
 if __name__ == "__main__":
     wave_instance = waves()
-    wave_instance.plot_waves()
-    vector_list = np.array([[0,0,-1]])
+    vector_list = np.array([[1,0,0],[0,0,-1],[-0.1,0.1,0.5],[1,2,3],[0,1,0]])
     print(wave_instance.getRandomNormals(vector_list))
+    wave_instance.plot_waves()

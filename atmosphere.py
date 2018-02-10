@@ -35,7 +35,7 @@ class atmosphere:
 
     #if you want to print out other things (or write to files), override this function and set verbose to true
     def print_state(self):
-        print(self.ray_origins)
+        print(self.ray_directions)
 
     def setup_surfaces(self):
         self.ground_surface = surface.sphere(material=mat.simpleWater,radius=self.inner_radius)

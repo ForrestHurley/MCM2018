@@ -11,7 +11,8 @@ def dot(vectsA, vectsB):
 
 def mirror(rays,normal):
     #https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
-    return rays - 2*np.expand_dims(dot(rays,normal)/dot(normal,normal),axis=1)*normal
+    out = rays - 2*np.expand_dims(dot(rays,normal)/dot(normal,normal),axis=1)*normal
+    return out
 
 def rotation_matrix(a,b):
     #https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d/476311#476311
@@ -48,8 +49,10 @@ def orthogonalsFromNormals(normals):#uses nx3 array for normals
 
     e1 = np.array([np.ones(normals.shape[0]),-normals[:,0]/normals[:,1],np.zeros(normals.shape[0])]).T
     nan_rows = np.where(np.isnan(e1[:,1]))
+    inf_rows = np.where(np.isinf(e1[:,1]))
 
-    e1[nan_rows] = [0,1,0]
+    e1[nan_rows] = [1,0,0]
+    e1[inf_rows] = [0,1,0]
 
     e2 = np.cross(normals,e1)
 
