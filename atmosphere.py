@@ -47,8 +47,12 @@ class atmosphere:
         self.logged_data.append(self.ray_origins)
 
     def setup_surfaces(self):
-        self.ground_surface = surface.sphere(material=mat.simpleWater,radius=self.inner_radius)
-        self.atmos_surface = surface.sphere(material=mat.simpleAtmosphere,radius=self.outer_radius)
+        water=mat.simpleWater()
+        water.water_model.normal_smoothing_factor=0.1
+        air=mat.simpleAtmosphere()
+        
+        self.ground_surface = surface.sphere(material=water,radius=self.inner_radius)
+        self.atmos_surface = surface.sphere(material=air,radius=self.outer_radius)
 
         self.iter = 0
 
@@ -73,6 +77,7 @@ class atmosphere:
                 self.iterate_rays(self.ground_surface)
 
             self.towards_sky = not self.towards_sky
+            self.heatmap.visualize_intensities()
         #np.savetxt('heatmap.csv',result,delimiter=',')
     def draw_sphere(self,ax,radius=200):
         # draw sphere
@@ -96,5 +101,7 @@ class atmosphere:
 if __name__=="__main__":
     world = atmosphere()
     world.simulate(30)
+    intensity_final=world.heatmap.get_physical_intensity(14)
+    np.save('finalstate',intensity_final)
     world.draw_from_log()
     world.heatmap.visualize_intensities()

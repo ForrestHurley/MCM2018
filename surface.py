@@ -4,7 +4,7 @@ import materials as mat
 
 class default_surface:
     def __init__(self,material=mat.default_mat):
-        self.material = material()
+        self.material = material
     
     def intersection_point(self,ray_origin,ray_direction):
         return ray_origin

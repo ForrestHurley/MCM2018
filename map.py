@@ -3,6 +3,7 @@ from mpl_toolkits.basemap import Basemap
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+
 # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
 # are the lat/lon values of the lower left and upper right corners
 # of the map.
@@ -21,6 +22,7 @@ final_x=np.concatenate((var,var))
 ysample1=np.full(30,-90)
 ysample2=np.full(30,90)
 
+intensity=np.load('finalstate.npy')
 for i in range(30):
     value=-180+12*i
     final_y=np.concatenate((ysample1,ysample2))
@@ -28,6 +30,7 @@ for i in range(30):
     linesy=[90,-90]
     x,y=m(linesx,linesy)
     m.plot(x,y,marker=None,color='k')
+
 for k in range(30):
     value=-1+(2/30)*k
     converted=math.asin(value)*(180/math.pi)

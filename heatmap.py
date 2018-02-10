@@ -1,7 +1,7 @@
 import numpy as np
 import mcm_utils
 from sphere_location import sphere_coordinates
-
+import matplotlib.pyplot as plt
 
 class heatmap:
     def __init__(self,ray_count = 100,total_power=100):
@@ -35,9 +35,12 @@ class heatmap:
     def get_physical_intensity(self,time_steps=None):
         if time_steps is not None:
             mean_count = np.mean(self.intensity[-time_steps:],axis=0)
-            return counts_to_intensity(mean_count)
+            return self.counts_to_intensity(mean_count)
         else:
-            return counts_to_intensity(self.intensity[-1])
+            return self.counts_to_intensity(self.intensity[-1])
 
     def visualize_intensities(self):
-        pass 
+        plt.imshow(self.get_physical_intensity())
+        plt.show() 
+
+
