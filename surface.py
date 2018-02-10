@@ -41,7 +41,7 @@ class default_surface:
 
 class sphere(default_surface):
     def __init__(self,material=mat.default_mat,center=[0,0,0],radius=1):
-        default_surface.__init__(material)
+        super().__init__(material)
         self.center = np.array(center)
         self.radius = radius
 
@@ -54,14 +54,14 @@ class sphere(default_surface):
 
         dist = -b + (b**2-a*c)**0.5
 
-        return ray_origin + dist*ray_direction
+        return ray_origin + dist[:,np.newaxis]*ray_direction
 
     def normal_from_surface(self,intersection_location):
-        return intersection_location - center
+        return intersection_location - self.center
 
 class plane(default_surface):
     def __init__(self,material=mat.default_mat,center=[0,0,0],normal=[0,0,1]):
-        default_surface.__init__(material)
+        super().__init__(material)
         self.center = np.array(center)
         self.normal = np.array(normal)
 
