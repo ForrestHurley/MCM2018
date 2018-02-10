@@ -9,17 +9,18 @@ import numpy as np
 import sys
 from pyiri2016 import IRI2016Profile
 
-e = 1.6021e-19 # The elementary charge
+e = 1.6021e-19  # The elementary charge
 m_e = 9.109e-31  # Mass of electron in kg
 eps_0 = 8.85418782e-12  # Epsilon naught
 KRe = 8497  # Effective earth radius in km
 mu_0 = 1.25663706e-6
 k_b = 1.3806485  # The Boltzmann constant
 
-# This below might not be right...
+
 def refractive_index(mu, eps):
     # Returns the refractive index of a medium given permittivity and permeability
     return (mu * eps)**0.5
+
 
 def refraction_angles(n, theta_i):
     # returns the angle of reflection and refraction
@@ -27,13 +28,14 @@ def refraction_angles(n, theta_i):
     reflected_angle = np.pi - refracted_angle
     return [reflected_angle, refracted_angle]
 
+
 def plasma_freq(N):  # N is the density of electrons. Returns w_p squared
     return (N*e**2)/(m_e * eps_0)
 
 def dielectric(N, omega, v=None):
     # N = e density, omega = signal freq, v = collision frequency
     w_p = plasma_freq(N)
-    
+
     if not v:  # If we consider collision frequency to be negligible
         return 1 - w_p/omega**2
 
@@ -44,7 +46,7 @@ def critical_freq(N_max):
     return 9*N_max**0.5
 
 def MUF(N_max, theta_i):  # Calculates the MUF based on maximum electron density
-    # If, at a given height, we have density N_max, then all waves with 
+    # If, at a given height, we have density N_max, then all waves with
     # incident angle theta_i won't be reflected
     return critical_freq(N_max) * (1/(np.cos(theta_i)))
 
@@ -81,8 +83,8 @@ def index_reflectance(theta_i, index=1.33):
     # assumes that signal is unpolarized
     # Assumes that the permeability of the material is close to mu naught
     cos_theta_t = ( 1 - ( (1/index) * np.sin(theta_i))**2 )**0.5
-    R_s = abs( (np.cos(theta_i) - index*cos_theta_t) / (np.cos(theta_i) + index*cos_theta_t) )**2 
-    R_p = abs( (cos_theta_t - index*np.cos(theta_i)) / (cos_theta_t + index*np.cos(theta_t)) )**2 
+    R_s = abs( (np.cos(theta_i) - index*cos_theta_t) / (np.cos(theta_i) + index*cos_theta_t) )**2
+    R_p = abs( (cos_theta_t - index*np.cos(theta_i)) / (cos_theta_t + index*np.cos(theta_t)) )**2
     return .5*(R_s + R_p)
 
 def perm_reflectance(theta_i, eps_2, mu_2, eps_1=1.0006*eps_0, mu_1=1.256637e-6):
@@ -113,26 +115,35 @@ def electron_density(altitude, lat, lon, year, month, hour):
     ne = iri2016Obj.a[0, index]
 
     return ne[altitude-100]
-    
+
+def electron_density_profile(lat, lon, year=2016, month=12, hour=12):
+    altlim = [100., 1000.]
+    altstp = 1.
+    iri2016Obj = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
+    altbins = np.arange(100., 1001., altstp)
+    nalt = len(altbins)
+    index = range(nalt)
+
+    ne = iri2016Obj.a[0, index]
+
+    return ne
+
 def virtual_height(lat, lon, frequency=30e6, theta_i=1,year=2000, month=12, hour=0):
-    print("entering with",lat,"latitude and", lon, "longitude")
     iri_data = IRI2016Profile( lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     f_c = frequency*np.cos(theta_i)
+    e_densities = electron_density_profile(lat, lon, year, month, hour)
     for height in range(100, 1000):
-        if electron_density(height, lat, lon, year, month, hour) > f_c**2/81:
-            print("found")
+        if e_densities[height-100] > f_c**2/81:
             return height-1
+
 
 
 def data_virtual_height(layer, lat, lon, year, month, hour):
     iri2016Obj = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     pass
-    
+
 
 def pressure(altitude):
     # Very rough estimate of pressure at altitude
     # which we use for a very rough estimate of collision frequency
     pass
-
-
-
