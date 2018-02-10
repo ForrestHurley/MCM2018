@@ -7,6 +7,7 @@ from mcm_utils import *
 import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+from heatmap import heatmap
 
 class atmosphere:
     def __init__(self):
@@ -62,21 +63,17 @@ class atmosphere:
         return np.amax(self.heatmap.intensity*(100/self.number_rays))
 
     def simulate(self,iterations):
-        out=np.zeros((int(iterations/2),30,30))
         for i in range(iterations):
             self.iter += 1
             
             if self.towards_sky:
                 self.heatmap.update_regions(self.ray_origins)
-                out[int(i/2)]=self.heatmap.intensity
-                image=plt.imshow(self.heatmap.intensity)
                 self.iterate_rays(self.atmos_surface)
             else:
                 self.iterate_rays(self.ground_surface)
 
             self.towards_sky = not self.towards_sky
-        result=np.concatenate(out)
-        np.savetxt('heatmap.csv',result,delimiter=',')
+        #np.savetxt('heatmap.csv',result,delimiter=',')
     def draw_sphere(self,ax,radius=200):
         # draw sphere
         u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
@@ -96,29 +93,8 @@ class atmosphere:
 
         plt.show()
 
-class heatmap:
-    def __init__(self):
-        self.intensity=np.zeros((30,30))
-        longitudes=np.linspace(0,360,num=30,endpoint=False)
-        extended_longitudes=np.tile(longitudes,(30,1))
-        sin_latitudes=np.linspace(1,-1,num=30,endpoint=False)
-        extended_sin_latitudes=np.tile(sin_latitudes,(30,1)).T
-        self.upper_right=np.swapaxes(np.array([extended_longitudes,extended_sin_latitudes]),0,2)
-        self.rights=extended_longitudes
-        self.uppers=extended_sin_latitudes
-
-    def update_regions(self,intersection_points):
-        self.reset()
-        latlongs=geographic_coordinates(intersection_points).T
-        xreg=(latlongs[1]//12).astype(int)
-        yreg=((1-np.sin(deg2rad(latlongs[0])))//(2/30)).astype(int)
-        for k in range(xreg.shape[0]):
-                self.intensity[xreg[k],yreg[k]]+=1            
-        
-    def reset(self):
-        self.intensity=np.zeros((30,30))    
-
 if __name__=="__main__":
     world = atmosphere()
     world.simulate(30)
     world.draw_from_log()
+    world.heatmap.visualize_intensities()
