@@ -2,10 +2,12 @@ import numpy as np
 import sys
 import surface
 import materials as mat
+from mcm_utils import *
 
 import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+from heatmap import heatmap
 
 class atmosphere:
     def __init__(self):
@@ -18,7 +20,8 @@ class atmosphere:
 
         self.setup_rays()
         self.setup_surfaces()
-
+        
+        self.heatmap=heatmap()
         self.verbose = True
 
         self.logged_data = []
@@ -44,8 +47,12 @@ class atmosphere:
         self.logged_data.append(self.ray_origins)
 
     def setup_surfaces(self):
-        self.ground_surface = surface.sphere(material=mat.simpleWater,radius=self.inner_radius)
-        self.atmos_surface = surface.sphere(material=mat.simpleAtmosphere,radius=self.outer_radius)
+        water=mat.simpleWater()
+        water.water_model.normal_smoothing_factor=0.1
+        air=mat.simpleAtmosphere()
+        
+        self.ground_surface = surface.sphere(material=water,radius=self.inner_radius)
+        self.atmos_surface = surface.sphere(material=air,radius=self.outer_radius)
 
         self.iter = 0
 
@@ -53,19 +60,25 @@ class atmosphere:
         if self.verbose:
             self.print_state()
         self.ray_origins, self.ray_directions = surface.reflect_rays(self.ray_origins,
-            self.ray_directions) #also handles attenuation
+            self.ray_directions)
+         #also handles attenuation
+
+    def signal_strength(self):
+        return np.amax(self.heatmap.intensity*(100/self.number_rays))
 
     def simulate(self,iterations):
         for i in range(iterations):
             self.iter += 1
-
+            
             if self.towards_sky:
+                self.heatmap.update_regions(self.ray_origins)
                 self.iterate_rays(self.atmos_surface)
             else:
                 self.iterate_rays(self.ground_surface)
 
             self.towards_sky = not self.towards_sky
-
+            self.heatmap.visualize_intensities()
+        #np.savetxt('heatmap.csv',result,delimiter=',')
     def draw_sphere(self,ax,radius=200):
         # draw sphere
         u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
@@ -87,5 +100,8 @@ class atmosphere:
 
 if __name__=="__main__":
     world = atmosphere()
-    world.simulate(10)
+    world.simulate(30)
+    intensity_final=world.heatmap.get_physical_intensity(14)
+    np.save('finalstate',intensity_final)
     world.draw_from_log()
+    world.heatmap.visualize_intensities()
