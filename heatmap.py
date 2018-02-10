@@ -1,26 +1,17 @@
 import numpy as np
 import mcm_utils
+from sphere_location import sphere_coordinates
+
 
 class heatmap:
     def __init__(self,ray_count = 100,total_power=100):
         self.segments=30
 
         self.reset()
-        self.build_sphere_mapping()
+        self.mapping = sphere_coordinates(self.segments)
 
         self.initial_ray_count = ray_count
         self.initial_power = total_power
-
-    def build_sphere_mapping(self):
-        
-        longitudes=np.linspace(0,360,num=self.segments,endpoint=False)
-        extended_longitudes=np.tile(longitudes,(self.segments,1))
-        sin_latitudes=np.linspace(1,-1,num=self.segments,endpoint=False)
-        extended_sin_latitudes=np.tile(sin_latitudes,(self.segments,1)).T
-
-        self.upper_right=np.swapaxes(np.array([extended_longitudes,extended_sin_latitudes]),0,2)
-        self.rights=extended_longitudes
-        self.uppers=extended_sin_latitudes
 
     def update_regions(self,intersection_points):
         self.intensity.append(self.accumulate_regions(intersection_points))
@@ -28,10 +19,7 @@ class heatmap:
     def accumulate_regions(self,intersection_points):
         current_heat = np.zeros((self.segments,self.segments))
 
-        latlongs=mcm_utils.geographic_coordinates(intersection_points).T
-        
-        xreg=(latlongs[1]/360*self.segments).astype(int)
-        yreg=((1-np.sin(mcm_utils.deg2rad(latlongs[0])))*(self.segments/2)).astype(int)
+        xreg, yreg = self.mapping.direction_to_region(intersection_points)
     
         for k in range(xreg.shape[0]):
                 current_heat[xreg[k],yreg[k]]+=1
