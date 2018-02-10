@@ -5,7 +5,7 @@ import materials as mat
 
 class atmosphere:
     def __init__(self):
-        self.number_rays = 40
+        self.number_rays = 200
         self.ray_start = [200,0,0]
         self.ray_direction = [1,1,0]
    
@@ -35,7 +35,7 @@ class atmosphere:
 
     #if you want to print out other things (or write to files), override this function and set verbose to true
     def print_state(self):
-        print(self.ray_directions)
+        print(self.ray_origins)
 
     def setup_surfaces(self):
         self.ground_surface = surface.sphere(material=mat.simpleWater,radius=self.inner_radius)

@@ -52,7 +52,11 @@ class sphere(default_surface):
         b = mcm_utils.dot(ray_direction,difference)
         c = mcm_utils.dot(difference,difference) - self.radius * self.radius
 
-        dist = -b + (b**2-a*c)**0.5
+        discriminant = (b**2-a*c)**0.5
+
+        possible_dist = [-b-discriminant,-b+discriminant]
+        abs_dist = np.abs(possible_dist)
+        dist = np.where(abs_dist[0] < abs_dist[1],possible_dist[0],possible_dist[1])
 
         return ray_origin + dist[:,np.newaxis]*ray_direction
 
