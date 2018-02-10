@@ -3,9 +3,13 @@ import sys
 import surface
 import materials as mat
 
+import matplotlib as mpl
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+
 class atmosphere:
     def __init__(self):
-        self.number_rays = 200
+        self.number_rays = 10
         self.ray_start = [200,0,0]
         self.ray_direction = [1,1,0]
    
@@ -16,6 +20,8 @@ class atmosphere:
         self.setup_surfaces()
 
         self.verbose = True
+
+        self.logged_data = []
 
     def setup_rays(self):
         ray_origins = np.tile(np.array([self.ray_start]),(self.number_rays,1))
@@ -35,6 +41,7 @@ class atmosphere:
 
     #if you want to print out other things (or write to files), override this function and set verbose to true
     def print_state(self):
+        self.logged_data.append(self.ray_origins)
         print(self.ray_origins)
 
     def setup_surfaces(self):
@@ -44,10 +51,10 @@ class atmosphere:
         self.iter = 0
 
     def iterate_rays(self,surface):
-        self.ray_origins, self.ray_directions = surface.reflect_rays(self.ray_origins,
-            self.ray_directions) #also handles attenuation
         if self.verbose:
             self.print_state()
+        self.ray_origins, self.ray_directions = surface.reflect_rays(self.ray_origins,
+            self.ray_directions) #also handles attenuation
 
     def simulate(self,iterations):
         for i in range(iterations):
@@ -60,7 +67,30 @@ class atmosphere:
 
             self.towards_sky = not self.towards_sky
 
-        
+    def draw_sphere(self,ax,radius=200):
+        # draw sphere
+        u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+        x = np.cos(u)*np.sin(v)*radius
+        y = np.sin(u)*np.sin(v)*radius
+        z = np.cos(v)*radius
+        ax.plot_wireframe(x, y, z, color="r")
+
+
+    def draw_from_log(self):
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        data = np.array(self.logged_data)
+        data = np.transpose(data,(1,2,0))
+        print(data.shape)
+        [print(*vals) for vals in data]
+        [ax.plot(*vals) for vals in data]
+
+        self.draw_sphere(ax,self.inner_radius)
+        self.draw_sphere(ax,self.outer_radius)
+
+        plt.show()
+
 if __name__=="__main__":
     world = atmosphere()
-    world.simulate(10)
+    world.simulate(5)
+    world.draw_from_log()
