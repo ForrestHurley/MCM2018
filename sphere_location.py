@@ -40,13 +40,20 @@ class geocentric_data:
         self.lambert_x=self.lambert_data[0]
         self.lambert_y=self.lambert_data[1]
 
-        self.function_interpolator=scipy.interpolate.CloughTocher2DInterpolator(np.array([self.latitude,self.longitude]).T,self.values)
-        
-        phi=deg2rad(self.longitude)
-        theta=deg2rad(90-self.latitude)
     
-        partial_phi=np.divide(np.diff(values),np.diff(phi))
-        partial_theta=np.divide(np.diff(values),np.diff(theta))
+        self.function_interpolator=scipy.interpolate.CloughTocher2DInterpolator(np.array([self.latitude,self.longitude]).T,self.values)
+
+        new_data=np.array([data[0],data[1],data[2]])
+        
+        structured=np.core.record.fromarrays(new_data,names='col1,col2,col3',formats='f8,f8,f8')
+        latsort=np.sort(structured,order='col1')               
+        longsort=np.sort(structured,order='col2')
+
+        phi=deg2rad(longsort[1])
+        theta=deg2rad(latsort[0])
+    
+        partial_phi=np.divide(np.diff(longsort[2]),np.diff(phi))
+        partial_theta=np.divide(np.diff(latsort[1]),np.diff(theta))
 
         phi=mcm_utils.add_convolve(phi)/2
         theta=mcm_utils.add_convolve(theta)/2
@@ -82,5 +89,5 @@ class geocentric_data:
             latlongs=np.array([90-rad2deg(vectors[2]),rad2deg(vectors[1])]).T
             return self.gradient_interpolator(latlongs) 
                 
-if __name__='__main__':
+if __name__=='__main__':
     print('hi')
