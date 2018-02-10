@@ -32,7 +32,8 @@ def geographic_coordinates(vectors):
     longitude=rad2deg(spherical_coordinates[1])
     return np.array([latitude,longitude]).T  
 
-    
+def add_convolve(vector):
+    return np.add(np.delete(vector,0),np.delete(vector,-1))
 
 def rad2deg(radians):
     return radians*(180/math.pi)
