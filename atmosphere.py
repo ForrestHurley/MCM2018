@@ -90,9 +90,9 @@ class atmosphere:
         fig = plt.figure()
         ax = fig.gca(projection='3d')
         self.draw_sphere(ax,self.inner_radius)
-        data = np.array(self.logged_data)
-        data = np.transpose(data,(1,2,0))
-        [ax.plot(*vals,color='b',alpha=4/data.shape[0]) for vals in data]
+        data = zip(*self.logged_data)
+        data = [zip(*val) for val in data]
+        [ax.plot(*vals,color='b',alpha=4/len(data)) for vals in data]
 
         plt.show()
 

@@ -36,7 +36,7 @@ class default_surface:
         return world_norm, mat_norm
 
     def attenuate_rays(self,ray_direction,material_normal,intersection_location):
-        return self.material.attenuate(ray_direction,material_normal,intersection_location)
+        return self.material.attenuate()
 
 
 class sphere(default_surface):
