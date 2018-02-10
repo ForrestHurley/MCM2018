@@ -114,15 +114,13 @@ def electron_density(altitude, lat, lon, year, month, hour):
 
     return ne[altitude-100]
     
-
-def virtual_height(frequency, theta_i, lat, lon, year, month, hour):
-    altlim = [100., 1000.]
-    altstp = 1.
-    altitude = round(altitude)
-    iri_data = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
+def virtual_height(lat, lon, frequency=30e6, theta_i=1,year=2000, month=12, hour=0):
+    print("entering with",lat,"latitude and", lon, "longitude")
+    iri_data = IRI2016Profile( lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     f_c = frequency*np.cos(theta_i)
     for height in range(100, 1000):
         if electron_density(height, lat, lon, year, month, hour) > f_c**2/81:
+            print("found")
             return height-1
 
 
@@ -137,6 +135,4 @@ def pressure(altitude):
     pass
 
 
-def D_attenuation
 
-print(electron_density(200, -11.95, -76.77,2003, 11, 21))

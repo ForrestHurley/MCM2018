@@ -1,7 +1,7 @@
 import mcm_utils
 import numpy as np
 import math
-
+import phys_utils
 class sphere_coordinates:
     def __init__(self,regions=30):
         self.segments = 30
@@ -67,7 +67,6 @@ class geocentric_data:
 
         self.gradient_interpolator=scipy.interpolate.CloughTocher2DInterpolator(np.array([new_latitude,new_longitude]).T,gradients)
      
-        
     def convert_lambert(self):
         return np.array([self.longitude, np.sin(deg2rad(90-self.latitude))])
         
@@ -90,4 +89,14 @@ class geocentric_data:
             return self.gradient_interpolator(latlongs) 
                 
 if __name__=='__main__':
-    print('hi')
+    frequency=30e6
+    theta_i=1
+    year=2000
+    month=12
+    hour=5
+    longitudes=np.tile(np.linspace(-180,180,num=20,endpoint=False),(20,1))
+    latitudes=np.tile(np.linspace(-90,90,num=20,endpoint=False).T,(20,1)).T
+    master=np.swapaxes(np.array([longitudes,latitudes]),0,2)
+    narrow=np.reshape(master,(400,2))
+    function= np.vectorize(phys_utils.virtual_height)
+    print(function(narrow.T[1],narrow.T[0]))    
