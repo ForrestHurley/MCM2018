@@ -4,6 +4,7 @@ from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 import scipy.optimize
 from scipy.interpolate import LinearNDInterpolator
+import mcm_utils
 
 class waves:
 
@@ -192,24 +193,11 @@ class waves:
 
         random_locs = np.random.uniform(*self.waverange,(vectors.shape[0],3))
 
-        e1_list, e2_list = self.orthogonalsFromNormals(vectors)
+        e1_list, e2_list = mcm_utils.orthogonalsFromNormals(np.squeeze(vectors,axis=2))
 
         projected_random = [np.sum(e1_list*random_locs,axis=1),np.sum(e2_list*random_locs,axis=1)]
 
         return np.array(projected_random).T
-
-    def orthogonalsFromNormals(self,normals):#uses nx3 array for normals
-        e1 = np.array([np.ones(normals.shape[0]),-normals[:,0]/normals[:,1],np.zeros(normals.shape[0])]).T
-        nan_rows = np.where(np.isnan(e1[:,1]))
-      
-        e1[nan_rows] = [0,1,0]
-
-        e2 = np.cross(normals,e1)
-
-        e1 = e1/np.expand_dims(np.linalg.norm(e1,axis=1),axis=-1)
-        e2 = e2/np.expand_dims(np.linalg.norm(e2,axis=1),axis=-1)
-
-        return e1, e2
 
     def getNormalAtPoints(self,points):
         return self.norms_interpolator(points)

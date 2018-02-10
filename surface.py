@@ -4,7 +4,7 @@ import materials as mat
 
 class default_surface:
     def __init__(self,material=mat.default_mat):
-        self.material = material
+        self.material = material()
     
     def intersection_point(self,ray_origin,ray_direction):
         return ray_origin
@@ -17,7 +17,7 @@ class default_surface:
         world_normals, material_normals = self.normal(ray_directions,intersections)
 
         attenuation = self.attenuate_rays(ray_directions,material_normals,intersections)
-        intersections, world_normals, ray_directions = self.attenuation(intersections, world_normals, ray_directions)
+        intersections, world_normals, ray_directions = attenuation(intersections, world_normals, ray_directions)
 
         new_directions = mcm_utils.mirror(ray_directions,world_normals)
 
@@ -25,9 +25,9 @@ class default_surface:
 
     def normal_from_material(self,ray_direction,surface_normal,intersection_location):
         incoming_direction, R = mcm_utils.rotate_into_frame(surface_normal,ray_direction)
-        mat_norms = self.material.normals(incoming_direction,intersection_location)
+        mat_norms = self.material.normals(incoming_direction,intersection_location).T
         R_inv = np.linalg.inv(R)
-        return R_inv @ np.expand_dims(mat_norms,axis=2), mat_norms
+        return np.squeeze(R_inv @ np.expand_dims(mat_norms,axis=2),axis=2), mat_norms
 
     def normal(self,ray_direction,intersection_point):
         surface_norm = self.normal_from_surface(intersection_point)
