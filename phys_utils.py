@@ -6,12 +6,15 @@
 ##################################################################
 
 import numpy as np
+import sys
+from pyiri2016 import IRI2016Profile
 
 e = 1.6021e-19 # The elementary charge
 m_e = 9.109e-31  # Mass of electron in kg
 eps_0 = 8.85418782e-12  # Epsilon naught
 KRe = 8497  # Effective earth radius in km
 mu_0 = 1.25663706e-6
+k_b = 1.3806485  # The Boltzmann constant
 
 # This below might not be right...
 def refractive_index(mu, eps):
@@ -98,6 +101,42 @@ def perm_reflectance(theta_i, eps_2, mu_2, eps_1=1.0006*eps_0, mu_1=1.256637e-6)
     R_p = abs( (Z2*cos_t - Z1*cos_i) / (Z2*cos_t + Z1*cos_i) )**2
     return .5*(R_s + R_p)
 
-def virtual_height()
-    #TODO
+def electron_density(altitude, lat, lon, year, month, hour):
+    altlim = [100., 1000.]
+    altstp = 1.
+    altitude = round(altitude)
+    iri2016Obj = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
+    altbins = np.arange(100., 1001., altstp)
+    nalt = len(altbins)
+    index = range(nalt)
+
+    ne = iri2016Obj.a[0, index]
+
+    return ne[altitude-100]
+    
+
+def virtual_height(frequency, theta_i, lat, lon, year, month, hour):
+    altlim = [100., 1000.]
+    altstp = 1.
+    altitude = round(altitude)
+    iri_data = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
+    f_c = frequency*np.cos(theta_i)
+    for height in range(100, 1000):
+        if electron_density(height, lat, lon, year, month, hour) > f_c**2/81:
+            return height-1
+
+
+def data_virtual_height(layer, lat, lon, year, month, hour):
+    iri2016Obj = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     pass
+    
+
+def pressure(altitude):
+    # Very rough estimate of pressure at altitude
+    # which we use for a very rough estimate of collision frequency
+    pass
+
+
+def D_attenuation
+
+print(electron_density(200, -11.95, -76.77,2003, 11, 21))

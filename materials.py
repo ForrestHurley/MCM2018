@@ -14,22 +14,7 @@ class default_mat:
     def normals(self,direction,location):
         return np.array([*np.zeros((2,location.shape[0])),np.ones(location.shape[0])])
 
-class simpleWater(default_mat):
-    def __init__(self,turbulence=0.1):
-        super().__init__()
-        self.water_model = waves()
-
-    def normals(self,direction,location):
-        return self.water_model.getRandomNormals(direction).T
-
-    def attenuate(self, *args):
-        pass  # I don't know how attenuation is modeled in this class, if at all
-
-
-class simpleAtmosphere(default_mat):
-    pass
-
-class fresnelWater(simpleWater):
+class fresnelMaterial(default_mat):
     def __init__(self,index_of_refraction=1.33):
         super().__init__()
         self.ref_index = index_of_refraction
@@ -46,19 +31,43 @@ class fresnelWater(simpleWater):
         return super(self.albedo).attenuate(args)  # I think this is how it works
 
 
-class fresnelAtmosphere(simpleAtmosphere):
-    def __init__(self,index_of_refraction=0.5):
+class simpleWater(default_mat):
+    def __init__(self,turbulence=0.1):
         super().__init__()
-        self.ref_index = index_of_refraction
+        self.water_model = waves()
 
-    def attenuate(self):
-        return super().attenuate()  
+    def normals(self,direction,location):
+        return self.water_model.getRandomNormals(direction).T
+
+    def attenuate(self, *args):
+        pass  # I don't know how attenuation is modeled in this class, if at all
+
+
+class simpleAtmosphere(default_mat):
+    pass
+
+class fresnelWater(fresnelMaterial, simpleWater):
+    def __init__(self, index_of_refraction=0.5):
+        super().__init__(index_of_refraction)
+    
+
+class fresnelAtmosphere(simpleAtmosphere):
+    def __init__(self, index_of_refraction=0.5):
+        super().__init__(index_of_refraction)
+
 
 class physicalWater(simpleWater):
     pass
 
 class physicalAtmosphere(simpleAtmosphere):
-    pass
+    def __init__(self, time, month):  # Provide time as a military time string for the given location (2:20PM = 1420)
+                                    # Provide day as a number and use a function to map to other months
+        super().__init__()
+        self.time = time
+
+    def attenuate(self, *args):
+        # Calculate the concentrations of N_2, O_2, 
+
 
 class simpleDirt(default_mat):
     pass
