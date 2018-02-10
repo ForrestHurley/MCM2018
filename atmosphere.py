@@ -3,99 +3,66 @@ import sys
 from reflection import *
 from surface import *
 import utils_mcm
+import materials as mat
 
 class atmosphere:
-    def points_of_incidence(directions, line_points, normal_vector,surface_point):
-        difference=np.subtract(surface_point, line_points)
-        dot1=np.sum(difference*normal_vector, axis=1)
-        dot2=np.sum(directions*normal_vector, axis=1)
-        return  np.add(line_points, (dot1/dot2)*directions)
-        
-    def points_of_incidence2(center, radius, line_points, directions):
-        directions=unitize(directions)
-        origin_difference=np.subtract(line_points, center)
-        a=np.linalg.norm(directions,axis=1)**2
-        b=(np.sum(directions*origin_difference, axis=1))
-        c=np.linalg.norm(origin_difference, axis=1)**2-radius**2
-        distance1=(-b+(b**2-a*c)**0.5)
-        distance2=(-b-(b**2-a*c)**0.5)
-        return (np.add(line_points,distance1[:,None]*directions),np.add(line_points,distance2[:,None]*directions))
-
-    def normal_sphere(points_of_incidence):
-        return unitize(points_of_incidence)
-        
-    def reflect_rays_sphere(center, radius, points, directions):
-        incidence_points=points_of_incidence2(center,radius, points, directions)
-        boolean_table=np.greater(distances(incidence_points[0],points),distances(incidence_points[1],points))
-        incidence_points=np.where(boolean_table[:,None], incidence_points[1],incidence_points[0])            
-        normals=normal_sphere(incidence_points)
-        new_vectors=unitize(mirror(directions, normals))
-        return(incidence_points, new_vectors)
-        
-    def reflect_rays(normals, points, directions, surface_point, surface_normal):
-        incidence_points=points_of_incidence(directions,points, surface_normal, surface_point)
-        new_vectors=mirror(directions, normals)
-        return (incidence_points, new_vectors)
-
-def main():
-    number_rays=40
-    points=np.tile(np.array([[200,0,0]]),(number_rays,1))
-    center=np.array([0,0,0])
-    
-    directions=np.tile(unitize(np.array([[1,1,0]])),(number_rays,1))
-    rands=np.array([np.random.rand(number_rays)/100,np.zeros(number_rays),np.zeros(number_rays)]).T
-    
-    directions=np.add(directions,rands)
-    radius=200
-    radius2=220
-    
-    iterations=40  
-    out=np.empty((2*iterations,number_rays,3))
-    for i in range(iterations):
-        new_stuff=reflect_rays_sphere(center,radius2,points, directions)
-        points=new_stuff[0]
-        directions=new_stuff[1]
-
-        out[2*i]=points
-        
-        new_stuff=reflect_rays_sphere(center,radius,points, directions)
-
-        points=new_stuff[0]
-        directions=new_stuff[1]
-       
-        
-        out[2*i+1]=points
-    
-    result=np.concatenate(np.swapaxes(out,0,1))
-    print(result)
-    np.savetxt('output.csv', result, delimiter=',')
-def imain():
-    surface_point=np.array([0,0,0])
-    surface_normal=np.array([0,1,0])
+    def __init__(self):
+        self.number_of_rays = 40
+        self.ray_start = [200,0,0]
+        self.ray_direction = [1,1,0]
    
-    surface_point2=np.array([0,20,0]) 
-    surface_normal2=np.array([0,-1,0])
+        self.inner_radius = 200
+        self.outer_radius = 220
 
-    normals=np.array([surface_normal])
-    points=np.array([[0,20,0]])
-    directions=np.array([[-1,-1,0]])
+        self.setup_rays()
+        self.setup_surfaces()
 
-    for i in range(10):
-        new_stuff=reflect_rays(normals, points, directions, surface_point, surface_normal)
-        
-        points=new_stuff[0]
-        directions=new_stuff[1]
-        print(points)
-        print(directions)
-        
-        new_stuff=reflect_rays(normals, points, directions, surface_point2, surface_normal2)
-        
-        points=new_stuff[0]
-        directions=new_stuff[1]
-        
-        print(points)
-        print(directions)
-        
+        self.verbose = True
+
+    def setup_rays(self):
+        ray_origins = np.tile(np.array([self.ray_start]),(self.number_rays,1))
+
+        ray_directions = np.tile(np.array([self.ray_direction]),(self.number_rays,1))
+        ray_directions = randomize_rays(ray_directions)
+
+        self.ray_origins = ray_origins
+        self.ray_directions = ray_directions
+
+        self.towards_sky = True
+
+        self.iter = 0
+
+    def randomize_rays(self,rays):
+        return rays + np.random.range(-0.05,0.05,(self.number_rays,3))
+
+    #if you want to print out other things (or write to files), override this function and set verbose to true
+    def print_state(self):
+        print(self.ray_origins)
+
+    def setup_surfaces(self):
+        self.ground_surface = sphere(material=mat.simpleWater,radius=self.inner_radius)
+        self.atmos_surface = sphere(material=mat.simpleAtmosphere,radius=self.outer_radius)
+
+        self.iter = 0
+
+    def iterate_rays(self,surface):
+        self.ray_origins, self.ray_directions = 
+            surface.reflect_rays(self.ray_origins,self.ray_directions) #also handles attenuation
+        if self.verbose:
+            self.print_state()
+
+    def simulate(self,iterations):
+        for i in range(iterations):
+            self.iter += 1
+
+            if towards_sky:
+                self.iterate_rays(self.atmos_surface)
+            else:
+                self.iterate_rays(self.ground_surface)
+
+            towards_sky = !towards_sky
+
         
 if __name__=="__main__":
-    main()
+    world = atmosphere()
+    world.simulate(10)

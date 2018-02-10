@@ -1,6 +1,6 @@
 
 
-class material:
+class default_mat:
 
     def attenuate(self,ray_direction,material_normal,intersection_location):
         def f(*args):
@@ -10,7 +10,7 @@ class material:
     def normal(self,direction,location):
         return numpy.array([*np.zeros(location.shape[0],2),np.ones(location.shape[0])])
 
-class simpleWater(material):
+class simpleWater(default_mat):
     from customocean import waves
 
     def __init__(self,turbulence):
@@ -19,5 +19,5 @@ class simpleWater(material):
     def normal(self,direction,location):
         self.surface.getRandomNormals(direction)
 
-class simpleAtmosphere(material):
-
+class simpleAtmosphere(default_mat):
+    pass
