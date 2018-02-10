@@ -48,6 +48,8 @@ class sphere(default_surface):
     def intersection_point(self,ray_origin,ray_direction):
         difference = ray_origin - self.center
 
+        ray_direction = mcm_utils.normalize(ray_direction)
+
         a = mcm_utils.dot(ray_direction,ray_direction)
         b = mcm_utils.dot(ray_direction,difference)
         c = mcm_utils.dot(difference,difference) - self.radius * self.radius

@@ -21,6 +21,8 @@ class waves:
 
         self.recalculate_surface=True
 
+        self.normal_smoothing_factor=0.1
+
     def __calculate_wave_norm(self):
         x = np.linspace(*self.waverange,self.resolution)
         y = np.linspace(*self.waverange,self.resolution)
@@ -179,8 +181,14 @@ class waves:
     def getWave(self,t):
         return self.wave(t,*self.waveParams)
 
+    def smooth_normals(self,initial_norms):
+        initial_norms[2:4] = self.normal_smoothing_factor*initial_norms[2:4]
+        return initial_norms
+
     def getWaveNorms(self,t):
-        return self.waveNorms(t,*self.waveParams)
+        initial_norms = self.waveNorms(t,*self.waveParams)
+        new_norms = self.smooth_normals(initial_norms)
+        return new_norms
 
     def precalculatedWaveAndNorms(self,transpose=True):
         if transpose:

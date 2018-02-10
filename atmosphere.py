@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 class atmosphere:
     def __init__(self):
-        self.number_rays = 10
+        self.number_rays = 1000
         self.ray_start = [200,0,0]
         self.ray_direction = [1,1,0]
    
@@ -42,7 +42,6 @@ class atmosphere:
     #if you want to print out other things (or write to files), override this function and set verbose to true
     def print_state(self):
         self.logged_data.append(self.ray_origins)
-        print(self.ray_origins)
 
     def setup_surfaces(self):
         self.ground_surface = surface.sphere(material=mat.simpleWater,radius=self.inner_radius)
@@ -73,24 +72,20 @@ class atmosphere:
         x = np.cos(u)*np.sin(v)*radius
         y = np.sin(u)*np.sin(v)*radius
         z = np.cos(v)*radius
-        ax.plot_wireframe(x, y, z, color="r")
+        ax.plot_surface(x, y, z, color="r")
 
 
     def draw_from_log(self):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
+        self.draw_sphere(ax,self.inner_radius)
         data = np.array(self.logged_data)
         data = np.transpose(data,(1,2,0))
-        print(data.shape)
-        [print(*vals) for vals in data]
-        [ax.plot(*vals) for vals in data]
-
-        self.draw_sphere(ax,self.inner_radius)
-        self.draw_sphere(ax,self.outer_radius)
+        [ax.plot(*vals,color='b',alpha=4/data.shape[0]) for vals in data]
 
         plt.show()
 
 if __name__=="__main__":
     world = atmosphere()
-    world.simulate(5)
+    world.simulate(10)
     world.draw_from_log()
