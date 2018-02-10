@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 def normalize(vectors):
     return vectors/np.linalg.norm(vectors,axis=1)[:,np.newaxis]
@@ -9,15 +10,31 @@ def dist(vectsA, vectsB):
 def dot(vectsA, vectsB):
     return np.sum(vectsA*vectsB,axis=1)
 
-def random_removal(probability,values):
-    indices = np.where(np.random.rand(values.shape[0]) < probability)
-    return [val[indices] for val in values]
-
 def mirror(rays,normal):
     #https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
     out = rays - 2*np.expand_dims(dot(rays,normal)/dot(normal,normal),axis=1)*normal
     return out
 
+def sphericals_from_vector(vectors):
+    r=np.linalg.norm(vectors,axis=1)
+    phi=np.arctan2(vectors.T[1],vectors.T[0])
+    theta=np.arccos(np.divide(vectors.T[2],r))
+    return np.array([r,phi,theta]).T
+
+def geographic_coordinates(vectors):
+    spherical_coordinates=sphericals_from_vector(vectors).T
+
+    latitude=90-rad2deg(spherical_coordinates[2])
+    longitude=rad2deg(spherical_coordinates[1])
+    return np.array([latitude,longitude]).T  
+
+    
+
+def rad2deg(radians):
+    return radians*(180/math.pi)
+
+def deg2rad(degrees):
+    return degrees*(math.pi/180)
 def rotation_matrix(a,b):
     #https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d/476311#476311
     a, b = np.array(a), np.array(b)
