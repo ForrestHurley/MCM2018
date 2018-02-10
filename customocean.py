@@ -6,14 +6,107 @@ import scipy.optimize
 from scipy.interpolate import LinearNDInterpolator
 import mcm_utils
 
+import vtk
+from vtk.util.numpy_support import vtk_to_numpy
+
+class precalculated_waves:
+    def __init__(self,wave_file):
+        self.load_vtk_data(wave_file)
+
+    def load_vtk_data(self,file_name):
+        reader = vtk.vtkUnstructuredGridReader()
+        reader.SetFileName(file_name)
+        reader.Update()  # Needed because of GetScalarRange
+
+        output = reader.GetOutput()
+        # Get the coordinates of nodes in the mesh
+        nodes_vtk_array= reader.GetOutput().GetPoints().GetData()
+
+        values_vtk_array = reader.GetOutput().GetPointData().GetArray() 
+
+        self.wavePoints = vtk_to_numpy(nodes_vtk_array)
+        self.waveData = vtk_to_numpy(values_vtk_array)
+
+    @property
+    def waveGrid(self):
+        return self.__waveGrid
+
+    @property
+    def waveHeight(self):
+        return self.__waveHeight
+
+    @property
+    def waveNorms(self):
+        return self.__waveNormal
+
+    @property
+    def waveMotion(self):
+        return self.__waveMotion
+
+    @property
+    def waveSalinity(self):
+        return self.__waveSalinity
+
+    @property
+    def waveTemp(self):
+        return self.__waveTemp
+
+    @property
+    def fullInterpolator(self):
+        if __interpolator is None:
+            self.__interpolator = LinearNDInterpolator(self.waveGrid,data,fill_value=0)
+        return self.__interpolator
+
+    def wavePropertiesAtLocation(self,location):
+        pass
+
+    def generate_normals_from_heights(self):
+        gradient = np.gradient(self.waveHeight,self.waveGrid)
+        gradient.append(np.negative(np.ones(gradient[0].shape)))
+        return gradient
+        
+
+    def render_wave(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d', facecolor='#1a5a98')
+        fig.patch.set_color('#1a5a98')
+
+        height = self.waveHeight
+        norms = self.waveNorms
+
+        colors = np.sqrt(np.sum(np.square(norms[2:4]),axis=0))
+
+        minn, maxx = colors.min(), colors.max()
+        normColors = matplotlib.colors.Normalize(minn,maxx)
+        m = plt.cm.ScalarMappable(norm=normColors,cmap='Reds')
+        m.set_array([])
+        fcolors = m.to_rgba(colors)
+
+        ax.plot_surface(t[0],t[1],t[2],facecolors=fcolors)
+
+        minT = np.min(t,axis=(1,2))
+        diffT = np.max(np.ptp(t,axis=0))
+        
+        ax.set_xlim(minT[0],minT[0]+diffT)
+        ax.set_ylim(minT[1],minT[1]+diffT)
+        ax.set_zlim(minT[2],minT[2]+diffT)
+        plt.show()
+
 class waves:
 
-    def __init__(self):
+    def __init__(self,wave_energy=4,wave_count=8,max_shape=0.5):
+        self.max_shape = max_shape
+        self.wave_count = wave_count
+        self.wave_energy = wave_energy
+
+        self.waverange=(0,10)
+
         self.wave=self.summedTrochoids
         self.waveNorms=self.summedTrochoidNorms
-        self.waveParams=([(0,1,0.6),(.57,0.6,0.5),(1,1.2,0.3)],)
-        self.resolution=20
-        self.waverange=(0,10)
+        #self.waveParams=([(0,1,0.6),(.57,0.6,0.5),(1,1.2,0.3)],)
+        self.set_random_wave_params()
+        
+        self.resolution=40
         self.__calculated_wave=None
         self.__calculated_norms=None
 
@@ -22,6 +115,19 @@ class waves:
         self.recalculate_surface=True
 
         self.normal_smoothing_factor=0.1
+
+    def set_random_wave_params(self):
+        randoms = np.random.dirichlet((1,)*self.wave_count,1)
+        energies = randoms*self.wave_energy
+        amplitude = np.sqrt(energies)[0]
+
+        wavelength = np.random.uniform(1/self.max_shape,2,self.wave_count)*amplitude
+
+        offset = np.random.uniform(self.waverange[0],self.waverange[1],(self.wave_count,2))
+
+        params = [np.random.uniform(0,3.14159,self.wave_count),wavelength,amplitude,offset]
+        params = list(zip(*params))
+        self.waveParams = (params,)
 
     def __calculate_wave_norm(self):
         x = np.linspace(*self.waverange,self.resolution)
@@ -98,21 +204,21 @@ class waves:
         self.__resolution = resolution
 
     @waverange.setter
-    def waverange(self,waveRange):
+    def waverange(self,waverange):
         self.__recalculate_surface=True
-        self.__waverange = waveRange
+        self.__waverange = waverange
 
-    def trochoid(self,t=np.array([0]),R=0.3,d=1):
-        x = R*t-d*np.sin(t)
-        y = R + d*np.cos(t)
+    def trochoid(self,t=np.array([0]),R=0.3,d=1,offset=[0,0]):
+        x = R*t-d*np.sin(t)+offset[0]
+        y = d*np.cos(t)+offset[1]
         return x, y
 
-    def trochoidNormal(self,t=np.array([0]),R=0.3,d=1):
+    def trochoidNormal(self,t=np.array([0]),R=0.3,d=1,offset=[0,0]):
         normals = np.clip(np.broadcast_arrays(np.nan_to_num(d*np.sin(t)/(d*np.cos(t)-R)),1),-6,6)
         return normals
 
-    def trochoidUnextrudedNormals(self,t=np.array([0]),R=0.3,d=1,angle=0):
-        initial = self.trochoidNormal(t,R,d)
+    def trochoidUnextrudedNormals(self,t=np.array([0]),R=0.3,d=1,angle=0,offset=[0,0]):
+        initial = self.trochoidNormal(t,R,d,offset)
         normals = np.array(np.broadcast_arrays(np.cos(angle)*initial[0],np.sin(angle)*initial[0],-1))
         return t,normals
 
@@ -153,15 +259,16 @@ class waves:
 
         return newPoints
 
-    def trochoid3D(self,t=np.array([[0],[0]]),theta=0, R=0.5, d=0.5):
-        surface = self.extrude(self.trochoid,t,theta,funcParams=(R,d))
+    def trochoid3D(self,t=np.array([[0],[0]]),theta=0, R=0.5, d=0.5, offset=[0,0]):
+        surface = self.extrude(self.trochoid,t,theta,funcParams=(R,d,offset))
         return surface
 
-    def trochoid3DNorms(self,t=np.array([[0],[0]]),theta=0, R=0.5, d=0.5):
-        norms=self.extrude(self.trochoidUnextrudedNormals,t,theta,tBoundFunc=self.trochoid,funcParams=(R,d,theta),tBoundFuncArgs=(R,d))
+    def trochoid3DNorms(self,t=np.array([[0],[0]]),theta=0, R=0.5, d=0.5, offset = [0,0]):
+        norms=self.extrude(self.trochoidUnextrudedNormals,t,theta,tBoundFunc=self.trochoid,funcParams=(R,d,theta, offset),tBoundFuncArgs=(R, d, offset))
         return norms
 
     def summedTrochoids(self,t=np.array([[0],[0]]),trochoidParameters=[(0,1,1)]):
+        #print(*trochoidParameters)
         surfaces = np.array([self.trochoid3D(t,*params) for params in trochoidParameters])
         summed_surface = np.sum(surfaces[:,2],axis=0)
         new_surface = np.array([*surfaces[0][:2],summed_surface])
@@ -234,11 +341,11 @@ class waves:
         m.set_array([])
         fcolors = m.to_rgba(colors)
 
-        ax.plot_surface(t[0],t[1],t[2],facecolors=fcolors)
+        ax.plot_surface(t[0],t[1],t[2],facecolors=fcolors,rstride=1,cstride=1)
         #ax.plot_wireframe(t[0],t[1],t[2], color='white',linewidth=0.5)
 
         minT = np.min(t,axis=(1,2))
-        diffT = np.max(np.ptp(t,axis=0))
+        diffT = np.max(np.max(t,axis=(1,2))-minT)
         
         #ax.axis("off")
         ax.set_xlim(minT[0],minT[0]+diffT)
@@ -248,6 +355,6 @@ class waves:
 
 if __name__ == "__main__":
     wave_instance = waves()
-    vector_list = np.array([[1,0,0],[0,0,-1],[-0.1,0.1,0.5],[1,2,3],[0,1,0]])
-    print(wave_instance.getRandomNormals(vector_list))
+    #vector_list = np.array([[1,0,0],[0,0,-1],[-0.1,0.1,0.5],[1,2,3],[0,1,0]])
+    #print(wave_instance.getRandomNormals(vector_list))
     wave_instance.plot_waves()
