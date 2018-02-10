@@ -99,4 +99,5 @@ if __name__=='__main__':
     master=np.swapaxes(np.array([longitudes,latitudes]),0,2)
     narrow=np.reshape(master,(400,2))
     function= np.vectorize(phys_utils.virtual_height)
-    print(function(narrow.T[1],narrow.T[0]))    
+    result=function(narrow.T[1],narrow.T[0])
+    print(result) 
