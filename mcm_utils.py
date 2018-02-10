@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 def normalize(vectors):
     return vectors/np.linalg.norm(vectors,axis=1)
