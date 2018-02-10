@@ -132,10 +132,19 @@ def virtual_height(lat, lon, frequency=30e6, theta_i=1,year=2000, month=12, hour
     iri_data = IRI2016Profile( lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     f_c = frequency*np.cos(theta_i)
     e_densities = electron_density_profile(lat, lon, year, month, hour)
+
+    if frequency > MUF(e_densities[1099], theta_i):
+        print("Frequency greater than MUF")
+        return 1000
+
     for height in range(100, 1000):
         if e_densities[height-100] > f_c**2/81:
             return height-1
 
+    for height in range(100, 1000):
+        if 1 - (81*e_densities[height-100]/frequency**2) < 0:
+            print("Bug in virtual height. Returning true height.")
+            return height    
 
 
 def data_virtual_height(layer, lat, lon, year, month, hour):

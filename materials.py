@@ -47,7 +47,7 @@ class simpleAtmosphere(default_mat):
     pass
 
 class fresnelWater(fresnelMaterial, simpleWater):
-    def __init__(self, index_of_refraction=0.5):
+    def __init__(self, index_of_refraction=7.5):
         super().__init__(index_of_refraction)
     
 
