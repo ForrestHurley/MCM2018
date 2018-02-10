@@ -1,6 +1,7 @@
 import numpy as np
 from customocean import waves
 import scipy
+import mcm_utils
 
 class default_mat:
     def __init__(self,albedo=0.9):
@@ -8,8 +9,7 @@ class default_mat:
 
     def attenuate(self):
         def f(*args):
-            indices = np.where(np.random.rand(args[0].shape[0]) < self.albedo)
-            return [val[indices] for val in args]
+            return mcm_utils.random_removal(self.albedo,args)
         return f
 
     def normals(self,direction,location):

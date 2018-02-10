@@ -9,6 +9,10 @@ def dist(vectsA, vectsB):
 def dot(vectsA, vectsB):
     return np.sum(vectsA*vectsB,axis=1)
 
+def random_removal(probability,values):
+    indices = np.where(np.random.rand(values.shape[0]) < probability)
+    return [val[indices] for val in values]
+
 def mirror(rays,normal):
     #https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
     out = rays - 2*np.expand_dims(dot(rays,normal)/dot(normal,normal),axis=1)*normal
