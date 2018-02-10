@@ -4,7 +4,6 @@ import numpy as np
 class surface:
     def __init__(self,material=None,appearance=None):
         self.material = material
-        self.appearance = appearance
     
     def intersection_point(ray_origin,ray_direction):
         return ray_origin
@@ -36,7 +35,7 @@ class surface:
         return world_norm, mat_norm
 
     def attenuate_rays(ray_direction,material_normal,intersection_location):
-        return self.appearance.attenuate(ray_direction,material_normal,intersection_location)
+        return self.material.attenuate(ray_direction,material_normal,intersection_location)
 
 
 class sphere(surface):

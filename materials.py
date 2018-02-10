@@ -2,10 +2,12 @@
 
 class material:
 
-    def attenuation(direction,location):
-        return 0
+    def attenuate(self,ray_direction,material_normal,intersection_location):
+        def f(*args):
+            return args
+        return f
 
-    def normal(direction,location):
+    def normal(self,direction,location):
         return numpy.array([*np.zeros(location.shape[0],2),np.ones(location.shape[0])])
 
 class simpleWater(material):
@@ -14,13 +16,8 @@ class simpleWater(material):
     def __init__(self,turbulence):
         self.surface = waves()
 
-    def attuation(direction,location):
-        return 0
-
-    def normal(direction,location):
+    def normal(self,direction,location):
         self.surface.getRandomNormals(direction)
 
 class simpleAtmosphere(material):
 
-    def attenuation(direction,location):
-        return 0
