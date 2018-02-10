@@ -1,6 +1,7 @@
 import mcm_utils
 import numpy as np
 import materials as mat
+from sphere_location import sphere_coordinates
 
 class default_surface:
     def __init__(self,material=mat.default_mat):
@@ -66,17 +67,21 @@ class sphere(default_surface):
         return intersection_location - self.center
 
 class bumpy_sphere(sphere):
-    def __init__(self,material=mat.default_mat,center=[0,0,0],radius=1):
+    def __init__(self,material=mat.default_mat,center=[0,0,0],resolution=30,radius=1):
         super().__init__(material,center,radius)
+        self.coordinates = sphere_coordinates(30)
+        self.heights = np.full((resolution,resolution),radius)
 
-    def normal_intersection(self,ray_origin,ray_direction):
-        return super().intersection_point(self,ray_origin,ray_direction)
+    def normal_from_surface(self,intersection_location):
+        return super().normal_from_surface(intersection_location)
 
     def height_of_sphere(self,points):
         return self.radius+sphericals_from_vectors(points)[1]
 
     def intersection_point(self,ray_origin,ray_direction):
-        guess=self.normal_intersection(ray_origin,ray_direction)
+        guess=super().intersection_point(self,ray_origin,ray_direction)
+
+        return guess
         
 
 class plane(default_surface):

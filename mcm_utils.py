@@ -85,4 +85,12 @@ def orthogonalsFromNormals(normals):#uses nx3 array for normals
     e2 = e2/np.expand_dims(np.linalg.norm(e2,axis=1),axis=-1)
 
     return e1, e2
-                                                              
+                                                             
+
+def newtons_method(func,gradient,guess=(0),iterations=100,error=0.01):
+    for i in range(iterations):
+        current_error = func(guess)
+        if current_error < error:
+            return guess
+        new_guess = guess - current_error/gradient(guess)
+    return guess
