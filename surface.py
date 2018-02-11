@@ -16,7 +16,7 @@ class default_surface:
         intersections = self.intersection_point(ray_origins,ray_directions)
         world_normals, material_normals = self.normal(ray_directions,intersections)
 
-        intersections, world_normals, ray_directions = self.attenuate_rays(ray_directions,material_normals,intersections)
+        intersections, world_normals, ray_directions = self.material.attenuate(ray_directions,material_normals,intersections)
         # intersections, world_normals, ray_directions = attenuation(intersections, world_normals, ray_directions)
 
         new_directions = mcm_utils.mirror(ray_directions,world_normals)
