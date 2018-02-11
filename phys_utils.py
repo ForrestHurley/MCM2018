@@ -9,6 +9,8 @@ import numpy as np
 import sys
 from pyiri2016 import IRI2016Profile
 import math
+from PIL import Image
+# import matplotlib.pyplot as plt
 
 e = 1.6021e-19  # The elementary charge
 m_e = 9.109e-31  # Mass of electron in kg
@@ -17,6 +19,8 @@ KRe = 8497  # Effective earth radius in km
 mu_0 = 1.25663706e-6
 k_b = 1.3806485  # The Boltzmann constant
 
+MODIS_DATA = Image.open('Datasets/Modis.tif')
+MODIS_DATA = np.array(MODIS_DATA)
 
 def refractive_index(mu, eps):
     # Returns the refractive index of a medium given permittivity and permeability
@@ -143,8 +147,49 @@ def earth_surface_reflectance(ground_type, theta_i, omega):
 
 
 def empirical_conductivity(ground_type):
-    #TODO Use the empirical conductivities I found to determine conductivity
+    # Cite the MODIS Data for this
+    # Key-values: [0=Water, 1-5=Forest, 6-7=Shrublands, 8-9=Savannas, 10=Grasslands, 11=Wetlands, 12=Croplands, 13=Urban, 14=Cropland, 15=Snow, 16=Barren]    
+
+    if ground_type == 254 or ground_type == 255:
+        print("Error: Unclassified point in MODIS data set. Considering land to be barren.")
+        ground_type = 16
+
+    cond_estimates = [5, ]
+
     return 0
+
+
+def get_ground_type(lat=0, lon=0):
+    if lat < -64 or lat > 84:
+        return 0
+    
+    im_x = math.floor((lon+180)*12)
+    im_y = math.floor((lat-84)*-12)
+    
+    if im_y == 1776:
+        im_y -= 1
+
+    if im_y < 0:
+        print("invalid lat. using a default")
+        im_y = 0
+
+    if im_y > 1775:
+        print("invalid lat. using a default")
+        im_y = 1775
+
+    if im_x < 0:
+        print("invalid lon. using a default")
+        im_x = 0
+
+    if im_x > 4319:
+        print("invalid lon. using a default")
+        im_x = 4319
+
+    return MODIS_DATA[im_y, im_x]
+
+
+def is_ground(lat, lon):
+    return get_ground_type(lat, lon) != 0
 
 
 def empirical_permittivity(ground_type):
@@ -223,8 +268,8 @@ def refract_waves(rays, normals, theta_i, n_i=1, freq=1e6, altitude=90, lat=0, l
     electron_density = electron_densities[altitude-90]
     n = ( 1 - (81*electron_density/freq**2) )**.5
     theta_r = np.asin(n_i / n * np.sin(theta_i))
-# Rotate the vectors through an angle of theta_r - theta_i
-# TODO
+    # Rotate the vectors through an angle of theta_r - theta_i
+    # TODO
 
 
 def pressure(altitude):
@@ -266,6 +311,8 @@ def D_layer_loss(freq=1e6, slice_sizes=10, theta_i=1):
         length = 1/(np.cos(theta_i)) * slice_sizes * 1000
         total_db_loss += attenuated_power_db(length, alpha)
 
+    return total_db_loss
+
 
 
 def ionospheric_attenuation(frequency=1e6, theta_i=1, lat=0, lon=0, year=2000, month=12, hour=0, day=15):
@@ -278,7 +325,7 @@ def ionospheric_attenuation(frequency=1e6, theta_i=1, lat=0, lon=0, year=2000, m
     
     return total_db_loss
 
-def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
+def calculate_time(in_day=1, in_month=12, in_year=2000, lat=0, long=0, is_rise=True):
     # @source: [http://williams.best.vwh.net/sunrise_sunset_algorithm.htm][2]
     # is_rise is a bool when it's true it indicates rise,
     # and if it's false it indicates setting time
@@ -308,28 +355,13 @@ def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
     sun_mean_anomaly = ( 0.9856 * rise_or_set_time ) - 3.289
     
     #4 calculate true longitude
-    true_long = ( sun_mean_anomaly + ( 1.916 * math.sin( math.radians( sun_mean_anomaly ) ) ) +( 0.020 * math.sin(  2 * math.radians( sun_mean_anomaly ) ) ) + 282.634 )
-        
-    # make sure true_long is within 0, 360
-    if true_long < 0:
-        true_long = true_long + 360
-    elif true_long > 360:
-        true_long = true_long - 360
-    else:
-        true_long = true_long
+    true_long = (( sun_mean_anomaly + ( 1.916 * math.sin( math.radians( sun_mean_anomaly ) ) ) +( 0.020 * math.sin(  2 * math.radians( sun_mean_anomaly ) ) ) + 282.634 ) ) % 360
     
     #5 calculate s_r_a (sun_right_ascenstion)
-    s_r_a = math.degrees( math.atan( 0.91764 * math.tan( math.radians( true_long ) ) ) )
+    s_r_a = math.degrees( math.atan( 0.91764 * math.tan( math.radians( true_long ) ) ) ) % 360
     
-    #make sure it's between 0 and 360
-    if s_r_a < 0:
-        s_r_a = s_r_a + 360
-    elif true_long > 360:
-        s_r_a = s_r_a - 360
-    else:
-        s_r_a = s_r_a
-
-# s_r_a has to be in the same Quadrant as true_long
+    
+    # s_r_a has to be in the same Quadrant as true_long
     true_long_quad = ( math.floor( true_long / 90 ) ) * 90
     s_r_a_quad = ( math.floor( s_r_a / 90 ) ) * 90
     s_r_a = s_r_a + ( true_long_quad - s_r_a_quad )
@@ -346,10 +378,10 @@ def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
         
     # extreme north / south
     if cos_hour > 1:
-        print("Sun never rises. Returning -1")
+        #print("Sun never rises. Returning -1")
         return -1
     elif cos_hour < -1:
-        print("Sun never sets. Returning -2")
+        #print("Sun never sets. Returning -2")
         return -2
     
     #7- sun/set local time calculations
@@ -359,17 +391,17 @@ def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
         sun_local_hour = math.degrees( math.acos( cos_hour ) ) / 15
 
     sun_event_time = sun_local_hour + s_r_a - ( 0.06571 * rise_or_set_time ) - 6.622
+    sun_event_time = sun_event_time % 24
     
     #final result
-    utc_time_zone = long * 24/360
-    time_in_utc =  sun_event_time - ( long / 15 ) + utc_time_zone
+    time_in_utc =  (sun_event_time - ( long / 15 ))%24
     
     return time_in_utc
 
 
 def is_day(lat=0, lon=0, day=1, month=12, year=2000, hour=12):
     sunrise = calculate_time(day, month, year, lat, lon, True)
-    sunset = calculate_time(day, month, year, lat, lon, False)
+    sunset = calculate_time(day, month, year, lat, lon, False) % 24
 
     if sunrise == -1 or sunset == -1:
         return False
@@ -378,10 +410,17 @@ def is_day(lat=0, lon=0, day=1, month=12, year=2000, hour=12):
 
     if hour > sunrise and hour < sunset:
         return True
+    elif sunrise > sunset and hour > sunrise:
+        return True
+    
     return False
 
 
 
 if __name__ == "main":
-    for frequency in range(1, 1000):
-        print(virtual_height(frequency=frequency*1e5))
+    earth = np.zeros((180, 360))
+    for lat in range(90, -90, -1):
+        for lon in range(-180, 180):
+            #print("Sunrise:", calculate_time(lat=lat, long=lon), "Sunset:",calculate_time(lat=lat, long=lon, is_rise=False))
+            earth[-lat+90][lon+180] = is_day(lat, lon, hour=20, year=2018, month=2, day=11)
+    #plt.imshow(earth)
