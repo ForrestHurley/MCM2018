@@ -11,7 +11,7 @@ from heatmap import heatmap
 
 class atmosphere:
     def __init__(self):
-        self.number_rays = 1000
+        self.number_rays = 30
         self.ray_start = [200,0,0]
         self.ray_direction = [1,1,0]
    
@@ -61,7 +61,7 @@ class atmosphere:
             self.print_state()
         self.ray_origins, self.ray_directions = surface.reflect_rays(self.ray_origins,
             self.ray_directions)
-         #also handles attenuation
+        #also handles attenuation
 
     def signal_strength(self):
         return np.amax(self.heatmap.intensity*(100/self.number_rays))
@@ -77,7 +77,7 @@ class atmosphere:
                 self.iterate_rays(self.ground_surface)
 
             self.towards_sky = not self.towards_sky
-            self.heatmap.visualize_intensities()
+            #self.heatmap.visualize_intensities()
         #np.savetxt('heatmap.csv',result,delimiter=',')
     def draw_sphere(self,ax,radius=200):
         # draw sphere
@@ -100,7 +100,7 @@ class atmosphere:
 
 if __name__=="__main__":
     world = atmosphere()
-    world.simulate(30)
+    world.simulate(6)
     intensity_final=world.heatmap.get_physical_intensity(14)
     np.save('finalstate',intensity_final)
     world.draw_from_log()
