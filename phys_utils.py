@@ -346,12 +346,11 @@ def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
         
     # extreme north / south
     if cos_hour > 1:
+        print("Sun never rises. Returning -1")
         return -1
-    # sys.exit()
-
     elif cos_hour < -1:
+        print("Sun never sets. Returning -2")
         return -2
-    # sys.exit()
     
     #7- sun/set local time calculations
     if is_rise:
@@ -371,6 +370,12 @@ def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
 def is_day(lat=0, lon=0, day=1, month=12, year=2000, hour=12):
     sunrise = calculate_time(day, month, year, lat, lon, True)
     sunset = calculate_time(day, month, year, lat, lon, False)
+
+    if sunrise == -1 or sunset == -1:
+        return False
+    if sunset == -2 or sunrise == -2:
+        return True
+
     if hour > sunrise and hour < sunset:
         return True
     return False
