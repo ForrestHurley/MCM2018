@@ -5,6 +5,8 @@ import scipy
 from mcm_utils import deg2rad, rad2deg
 from scipy.interpolate import CloughTocher2DInterpolator
 import matplotlib.pyplot as plt
+import phys_utils
+from mpl_toolkits.basemap import Basemap
 
 class sphere_coordinates:
     def __init__(self,regions=30):
@@ -32,7 +34,8 @@ class sphere_coordinates:
 
 class geocentric_data:
     def convert_lambert(self):
-        return np.array([self.longitude, np.sin(deg2rad(np.full(self.latitude.shape,90)-self.latitude))])
+        lambert_coordinate=np.sin(deg2rad(self.latitude))
+        return np.array([self.longitude, lambert_coordinate])
     #data must be a sorted array of latitudes, longitudes, and then grid mesh of the coordinates.    
     def __init__(self,latitudes, longitudes, data, radius=200):
         self.radius=radius
@@ -86,22 +89,46 @@ class geocentric_data:
         if system=='spherical':
             latlongs=np.array([90-rad2deg(vectors[2]),rad2deg(vectors[1])]).T
             return self.function_interpolator(latlongs) 
+        if system=='geographic':
+            return self.function_interpolator(vectors)
     
     def interpolate_gradient(self,vector, system='cartesian'):
         if system=='cartesian': 
             return self.gradient_interpolator(mcm_utils.geographic_coordinates(vectors))
         if system=='spherical':
             latlongs=np.array([90-rad2deg(vectors[2]),rad2deg(vectors[1])]).T
-            return self.gradient_interpolator(latlongs) 
-                
+            return self.gradient_interpolator(latlongs)
+        if system=='geographic':
+            return self.gradient_interpolator(vector) 
+
+    def draw_map(self):
+        # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
+        # are the lat/lon values of the lower left and upper right corners
+        # of the map.
+        # resolution = 'c' means use crude resolution coastlines.
+        m = Basemap(projection='cea',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c')
+        mapx,mapy=m(self.longitude,self.latitude)
+        m.pcolormesh(mapx,mapy,self.values)
+        #m.fillcontinents(color='coral',lake_color='aqua')
+        m.drawcoastlines()
+       # print(mapx)
+        # draw parallels and meridians.
+        #m.drawparallels(np.arange(-90.,91.,30.))
+        #m.drawmeridians(np.arange(-180.,181.,60.))
+        #m.drawmapboundary(fill_color='aqua')
+        plt.show()
 if __name__=='__main__':
-    frequency=30e6
-    theta_i=1
-    year=2000
-    month=12
-    hour=5
     longitudes=np.linspace(-180,180,num=20,endpoint=False)
     latitudes=np.linspace(-90,90,num=20,endpoint=False)
-    data=np.full((20,20),99)
+    #data=np.zeros((20,20))
+    #for i in range(latitudes.shape[0]):
+    #    for k in range(longitudes.shape[0]):
+    #        #print("for latitude",latitudes[i],"and for longitude",longitudes[k])
+    #        profile=phys_utils.electron_density_profile(latitudes[i],longitudes[k])
+    #        data[i][k]=np.amax(profile)
+    #np.save('electron_density',data)
+    data=np.load('electron_density.npy')
     constant=geocentric_data(latitudes,longitudes,data)
-    constant.visualize_lambert()
+    maxvector=np.array([20,50])
+#    print(constant.interpolate_gradient(maxvector,system='geographic'))
+    constant.draw_map()

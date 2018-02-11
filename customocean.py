@@ -97,8 +97,46 @@ class statsWave:
     def __init__(self):
         self.scale_factor=0.001
         self.tile_size=100
-        self.wind_direction=np.array([[2,2]])
-        self.resolution=(128,128)
+        self.wind_direction=np.array([[10,10]])
+        self.resolution=(256,256)
+
+        self.__recalculate = True
+
+    @property
+    def scale_factor(self):
+        return self.__scale_factor
+
+    @property
+    def tile_size(self):
+        return self.__tile_size
+
+    @property
+    def wind_direction(self):
+        return self.__wind_direction
+
+    @property
+    def resolution(self):
+        return self.__resolution
+
+    @scale_factor.setter
+    def scale_factor(self,scale_factor):
+        self.__scale_factor = scale_factor
+        self.__recalculate = True
+
+    @tile_size.setter
+    def tile_size(self,tile_size):
+        self.__tile_size = tile_size
+        self.__recalculate = True
+
+    @wind_direction.setter
+    def wind_direction(self,wind_direction):
+        self.__wind_direction = wind_direction
+        self.__recalculate = True
+
+    @resolution.setter
+    def resolution(self,resolution):
+        self.__resolution = resolution
+        self.__recalculate = True
 
     def to_world(self,k):
         k = 2*k - self.resolution
@@ -158,15 +196,21 @@ class statsWave:
         waves[1::2,1::2] = -waves[1::2,1::2]
 
         return np.real(waves)
-   
+  
+    def make_grid(self,resolution):
+        x,y = np.arange(self.resolution[0]),np.arange(self.resolution[1])
+        points = np.array(np.meshgrid(x,y))
+        return points
+
     @property
     def grid(self):
-        try:
-            return self.__grid
-        except AttributeError:
-            x,y = np.arange(self.resolution[0]),np.arange(self.resolution[1])
-            points = np.array(np.meshgrid(x,y))
-            self.__grid = points
+        if not self.__recalculate:
+            try:
+                return self.__grid
+            except AttributeError:
+                self.__grid = self.make_grid(self.resolution)
+        else:
+            self.__grid = self.make_grid(self.resolution)
         return self.__grid
 
     @property
@@ -178,9 +222,12 @@ class statsWave:
         return self.grid*self.tile_size/self.resolution[0]
     @property
     def wave_surface(self):
-        try:
-            return self.__wave_surface
-        except AttributeError:
+        if not self.__recalculate:
+            try:
+                return self.__wave_surface
+            except AttributeError:
+                self.__wave_surface = self.__iterate_tiles()
+        else:
             self.__wave_surface = self.__iterate_tiles()
         return self.__wave_surface
     
@@ -199,12 +246,12 @@ class statsWave:
             self.__wave_normals = self.numericNormal()
         return self.__wave_normals
 
-    def visualize_wave(self):
+    def visualize_wave(self,bNormalColor=False,save_name=None):
         waves = self.wave_surface
 
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d', facecolor='#1a5a98')
-        fig.patch.set_color('#1a5a98')
+        ax = fig.add_subplot(111, projection='3d', facecolor='#ffffff')
+        fig.patch.set_color('#ffffff')
 
         points = self.true_world_grid
         normals = self.wave_normals
@@ -217,18 +264,24 @@ class statsWave:
         m.set_array([])
         fcolors = m.to_rgba(colors)
 
-        ax.plot_surface(points[0],points[1],waves,facecolors=fcolors,rstride=1,cstride=1)
+        if bNormalColor:
+            ax.plot_surface(points[0],points[1],waves,facecolors=fcolors,linewidth=0,rstride=1,cstride=1)
+        else:
+            ax.plot_surface(points[0],points[1],waves,linewidth=0,rstride=1,cstride=1)
         #ax.plot_wireframe(t[0],t[1],t[2], color='white',linewidth=0.5)
 
         t = [*points,waves]
         minT = np.min(t,axis=(1,2))
         diffT = np.max(np.max(t,axis=(1,2))-minT)
 
-        #ax.axis("off")
+        ax.axis("off")
         ax.set_xlim(minT[0],minT[0]+diffT)
         ax.set_ylim(minT[1],minT[1]+diffT)
         ax.set_zlim(minT[2],minT[2]+diffT)
-        plt.show()
+        if save_name is None:
+            plt.show()
+        else:
+            plt.savefig(save_name,dpi=600)
 
 class waves:
 
@@ -536,4 +589,7 @@ if __name__ == "__main__":
     new_wave = statsWave()
     #print(new_wave.fourier_amplitude(np.array([[63,63]])))
     #print(new_wave.phillips(np.array([[-1,-1]])))
-    new_wave.visualize_wave()
+    for i in range(0,8):
+        new_wave.wind_direction = np.array([[5*i+0.5,5*i+0.5]])
+        print(new_wave.wind_direction)
+        new_wave.visualize_wave(save_name="wind_speed_" + str(np.sqrt(2*(5*i+0.5)**2)) + ".pdf")
