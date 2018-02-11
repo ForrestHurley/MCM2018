@@ -128,12 +128,12 @@ def electron_density_profile(lat, lon, year=2016, month=12, hour=12):
 
     return ne
 
-def virtual_height(lat, lon, frequency=30e6, theta_i=1,year=2000, month=12, hour=0):
+def virtual_height(lat=0, lon=0, frequency=30e-3, theta_i=1,year=2000, month=12, hour=0):
     iri_data = IRI2016Profile( lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     f_c = frequency*np.cos(theta_i)
     e_densities = electron_density_profile(lat, lon, year, month, hour)
 
-    if frequency > MUF(e_densities[1099], theta_i):
+    if frequency > MUF(max(e_densities), theta_i):
         print("Frequency greater than MUF")
         return 1000
 
@@ -142,9 +142,11 @@ def virtual_height(lat, lon, frequency=30e6, theta_i=1,year=2000, month=12, hour
             return height-1
 
     for height in range(100, 1000):
-        if 1 - (81*e_densities[height-100]/frequency**2) < 0:
+        if (1 - (81*e_densities[height-100]/frequency**2))**0.5 < 0:
             print("Bug in virtual height. Returning true height.")
             return height    
+
+    return 1000
 
 
 def data_virtual_height(layer, lat, lon, year, month, hour):
@@ -156,3 +158,6 @@ def pressure(altitude):
     # Very rough estimate of pressure at altitude
     # which we use for a very rough estimate of collision frequency
     pass
+
+for frequency in range(1, 1000):
+    print(virtual_height(frequency=frequency*1e5))
