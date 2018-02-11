@@ -28,8 +28,7 @@ class fresnelMaterial(default_mat):
         if theta_i > np.pi/2:  # Just wanted to be sure that the angle of incidence was less than 90deg
             theta_i = np.pi - theta_i
         self.albedo = index_reflectance(theta_i, self.ref_index)
-        return super(self.albedo).attenuate(args)  # I think this is how it works
-
+        return super().attenuate(self.albedo,args) 
 
 class simpleWater(default_mat):
     def __init__(self,turbulence=0.1):
@@ -40,8 +39,7 @@ class simpleWater(default_mat):
         return self.water_model.getRandomNormals(direction).T
 
     def attenuate(self, *args):
-        pass  # I don't know how attenuation is modeled in this class, if at all
-
+        return super().attenuate(*args)
 
 class simpleAtmosphere(default_mat):
     pass
