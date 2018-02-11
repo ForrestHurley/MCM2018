@@ -8,6 +8,7 @@
 import numpy as np
 import sys
 from pyiri2016 import IRI2016Profile
+import math
 
 e = 1.6021e-19  # The elementary charge
 m_e = 9.109e-31  # Mass of electron in kg
@@ -66,11 +67,11 @@ def skip_dist(theta_i, virtual_height):
 def free_space_wave_number(wavelength):
     return 2*np.pi / wavelength
 
-def propagation_constant(eps, k_0):
-    return eps**0.5 * k_0
+def propagation_constant(eps, wavelength):
+    return eps**0.5 * free_space_wave_number(wavelength)
 
-def attenuation_constant(eps, k_0):
-    return np.real(propagation_constant(eps, k_0))
+def attenuation_constant(eps, wavelength):
+        return np.real(propagation_constant(eps, wavelength))
 
 def attenuated_power(distance, alpha, old_power):
     # Computes the attenuated power after traveling through a medium
@@ -117,10 +118,10 @@ def electron_density(altitude, lat, lon, year, month, hour):
     return ne[altitude-100]
 
 def electron_density_profile(lat, lon, year=2016, month=12, hour=12):
-    altlim = [100., 1000.]
+    altlim = [90., 1000.]
     altstp = 1.
     iri2016Obj = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
-    altbins = np.arange(100., 1001., altstp)
+    altbins = np.arange(90., 1001., altstp)
     nalt = len(altbins)
     index = range(nalt)
 
@@ -128,23 +129,27 @@ def electron_density_profile(lat, lon, year=2016, month=12, hour=12):
 
     return ne
 
-def virtual_height(lat=0, lon=0, frequency=30e-3, theta_i=1,year=2000, month=12, hour=0):
+def virtual_height(lat=0, lon=0, frequency=3e6, theta_i=1,year=2000, month=12, hour=0):
     iri_data = IRI2016Profile( lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     f_c = frequency*np.cos(theta_i)
     e_densities = electron_density_profile(lat, lon, year, month, hour)
+    muf = MUF(max(e_densities), theta_i)
 
-    if frequency > MUF(max(e_densities), theta_i):
+    if frequency > muf:
         print("Frequency greater than MUF")
         return 1000
 
-    for height in range(100, 1000):
-        if e_densities[height-100] > f_c**2/81:
+    if frequency > 0.85 * muf:
+        print("Frequency greater than OWF. Note that this can cause irregularities")
+
+    for height in range(90, 1000):
+        if e_densities[height-90] > f_c**2/81:
             return height-1
 
-    for height in range(100, 1000):
+    for height in range(90, 1000):
         if (1 - (81*e_densities[height-100]/frequency**2))**0.5 < 0:
             print("Bug in virtual height. Returning true height.")
-            return height    
+            return height
 
     return 1000
 
@@ -155,9 +160,150 @@ def data_virtual_height(layer, lat, lon, year, month, hour):
 
 
 def pressure(altitude):
-    # Very rough estimate of pressure at altitude
-    # which we use for a very rough estimate of collision frequency
-    pass
+    # Estimate for pressure at given altitude (altitude in km)
+    # Returns P in mmHg
+    
+    #@source: Pressure data from US standard atmosphere on engineering toolbox
+    heights = range(10, 85, 10)
+    pressures = np.array([2.65, .5529, .1197, .0287, .007978, .002196, .00052, .00011])
+    pressures = pressures*1e4/133.322    
 
-for frequency in range(1, 1000):
-    print(virtual_height(frequency=frequency*1e5))
+    for i in range(len(heights)):
+        if heights[i] > altitude:
+            return pressures[i-1]
+    return pressures[7]
+
+def free_space_loss(freq, distance):
+    # Calculates the free space loss of waves as they travel a given distance through air
+    # provide frequency in MHz and distance in meters
+    # returns power loss in decibels
+    return 27.6 + 20*np.log(freq)/np.log(10) + 20*np.log(distance)/np.log(10)
+
+
+def D_layer_loss(freq=1e6, slice_sizes=10, theta_i=1):
+    percent_remaining = 1
+    estimated_N = [1, 10, 40, 300]
+    eps_prev = 1
+
+    for altitude in range(60, 91, slice_sizes):
+        # We need N, omega, v
+        N_guess = estimated_N[(altitude-60)//10]
+        v = 8.4e7 * pressure(altitude)
+        eps = dielectric(N_guess, freq*2*np.pi, v) 
+    
+
+
+def ionospheric_attenuation(frequency=1e6, theta_i=1, lat=0, lon=0, year=2000, month=12, hour=0, day=15):
+    if is_day(lat, lon, day, month, year, hour) == False:
+        # Calculate attenuation in D-Layer
+        pass
+    pass
+        
+
+def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
+    # @source: [http://williams.best.vwh.net/sunrise_sunset_algorithm.htm][2]
+    # is_rise is a bool when it's true it indicates rise,
+    # and if it's false it indicates setting time
+
+    #set Zenith
+    zenith = 96
+    # offical      = 90 degrees 50'
+    # civil        = 96 degrees
+    # nautical     = 102 degrees
+    # astronomical = 108 degrees
+
+
+    #1- calculate the day of year
+    n1 = math.floor( 275 * in_month / 9 )
+    n2 = math.floor( ( in_month + 9 ) / 12 )
+    n3 = ( 1 + math.floor( in_year - 4 * math.floor( in_year / 4 ) + 2 ) / 3 )
+
+    new_day = n1 - ( n2 * n3 ) + in_day - 30
+
+    #2- calculate rising / setting time
+    if is_rise:
+      rise_or_set_time = new_day + ( ( 6 - ( long / 15 ) ) / 24 )
+    else:
+      rise_or_set_time = new_day + ( ( 18 - ( long/ 15 ) ) / 24 )
+
+    #3- calculate sun mean anamoly
+    sun_mean_anomaly = ( 0.9856 * rise_or_set_time ) - 3.289
+
+    #4 calculate true longitude
+    true_long = ( sun_mean_anomaly +
+                  ( 1.916 * math.sin( math.radians( sun_mean_anomaly ) ) ) +
+                  ( 0.020 * math.sin(  2 * math.radians( sun_mean_anomaly ) ) ) +
+                  282.634 )
+
+    # make sure true_long is within 0, 360
+    if true_long < 0:
+      true_long = true_long + 360
+    elif true_long > 360:
+      true_long = true_long - 360
+    else:
+      true_long = true_long
+
+    #5 calculate s_r_a (sun_right_ascenstion)
+    s_r_a = math.degrees( math.atan( 0.91764 * math.tan( math.radians( true_long ) ) ) )
+
+    #make sure it's between 0 and 360
+    if s_r_a < 0:
+      s_r_a = s_r_a + 360
+    elif true_long > 360:
+      s_r_a = s_r_a - 360
+    else:
+      s_r_a = s_r_a
+
+    # s_r_a has to be in the same Quadrant as true_long
+    true_long_quad = ( math.floor( true_long / 90 ) ) * 90
+    s_r_a_quad = ( math.floor( s_r_a / 90 ) ) * 90
+    s_r_a = s_r_a + ( true_long_quad - s_r_a_quad )
+
+    # convert s_r_a to hours
+    s_r_a = s_r_a / 15
+
+    #6- calculate sun diclanation in terms of cos and sin
+    sin_declanation = 0.39782 * math.sin( math.radians ( true_long ) )
+    cos_declanation = math.cos( math.asin( sin_declanation ) )
+
+    # sun local hour
+    cos_hour = ( math.cos( math.radians( zenith ) ) -
+                 ( sin_declanation * math.sin( math.radians ( lat ) ) ) /
+                 ( cos_declanation * math.cos( math.radians ( lat ) ) ) )
+
+
+    # extreme north / south
+    if cos_hour > 1:
+      return -1
+      # sys.exit()
+    elif cos_hour < -1:
+      return -2
+      # sys.exit()
+
+    #7- sun/set local time calculations
+    if is_rise:
+      sun_local_hour =  ( 360 - math.degrees(math.acos( cos_hour ) ) ) / 15
+    else:
+      sun_local_hour = math.degrees( math.acos( cos_hour ) ) / 15
+
+    sun_event_time = sun_local_hour + s_r_a - ( 0.06571 * rise_or_set_time ) - 6.622
+
+    #final result
+    utc_time_zone = long * 24/360
+    time_in_utc =  sun_event_time - ( long / 15 ) + utc_time_zone
+
+    return time_in_utc
+
+
+def is_day(lat=0, lon=0, day=1, month=12, year=2000, hour=12):
+    sunrise = calculate_time(day, month, year, lat, lon, True)
+    sunset = calculate_time(day, month, year, lat, lon, False)
+    if hour > sunrise and hour < sunset:
+        return True
+    return False
+
+
+
+if __name__ == "main":
+    for frequency in range(1, 1000):
+        print(virtual_height(frequency=frequency*1e5))
