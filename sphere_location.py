@@ -9,8 +9,8 @@ import phys_utils
 from mpl_toolkits.basemap import Basemap
 
 class sphere_coordinates:
-    def __init__(self,regions=30):
-        self.segments = 30
+    def __init__(self,segments=30):
+        self.segments = segments
         self.build_sphere_mapping()
 
     def build_sphere_mapping(self):

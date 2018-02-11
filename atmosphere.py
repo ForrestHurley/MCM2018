@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 from heatmap import heatmap
 
 class atmosphere:
-    def __init__(self):
-        self.number_rays = 30
+    def __init__(self,region_segments=30):
+        self.number_rays = 1000
         self.ray_start = [200,0,0]
         self.ray_direction = [1,1,0]
    
@@ -21,7 +21,7 @@ class atmosphere:
         self.setup_rays()
         self.setup_surfaces()
         
-        self.heatmap=heatmap()
+        self.heatmap=heatmap(segments=region_segments)
         self.verbose = True
 
         self.logged_data = []
@@ -99,7 +99,7 @@ class atmosphere:
         plt.show()
 
 if __name__=="__main__":
-    world = atmosphere()
+    world = atmosphere(region_segments=60)
     world.simulate(15)
     intensity_final=world.heatmap.get_physical_intensity(14)
     np.save('finalstate',intensity_final)

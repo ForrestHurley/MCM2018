@@ -4,8 +4,8 @@ from sphere_location import sphere_coordinates,geocentric_data
 import matplotlib.pyplot as plt
 
 class heatmap:
-    def __init__(self,ray_count = 100,total_power=100):
-        self.segments=30
+    def __init__(self,ray_count = 100,total_power=100,segments=30):
+        self.segments=segments
 
         self.reset()
         self.mapping = sphere_coordinates(self.segments)
