@@ -12,11 +12,11 @@ from heatmap import heatmap
 class atmosphere:
     def __init__(self,region_segments=30):
         self.number_rays = 1000
-        self.ray_start = [200,0,0]
+        self.ray_start = [0,6371,0]
         self.ray_direction = [1,1,0]
-   
-        self.inner_radius = 200
-        self.outer_radius = 220
+        
+        self.inner_radius = 6371
+        self.outer_radius = 6671
 
         self.setup_rays()
         self.setup_surfaces()
@@ -100,9 +100,8 @@ class atmosphere:
 
 if __name__=="__main__":
     world = atmosphere(region_segments=60)
-    world.simulate(15)
+    world.simulate(1)
     intensity_final=world.heatmap.get_physical_intensity(14)
     np.save('finalstate',intensity_final)
-    world.draw_from_log()
     world.heatmap.visualize_intensities(mapview=True)
     world.heatmap.visualize_intensities(mapview=False)
