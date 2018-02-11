@@ -66,10 +66,10 @@ class physicalAtmosphere(simpleAtmosphere):
         self.time = time
 
     def attenuate(self, *args):
+        pass
         # Calculate the concentrations of N_2, O_2, 
 
-
-class simpleDirt(default_mat):
+class simpleDirt:
     pass
 
 class multiMat(default_mat):
