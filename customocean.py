@@ -532,7 +532,7 @@ class waves:
         return new_norms
 
     def randomPointsFromVectors(self,vectors): #uses nx3 array for the vectors
-        points, norms = self.precalculatedWaveAndNorms(transpose=False)
+        #points, norms = self.precalculatedWaveAndNorms(transpose=False)
 
         random_locs = np.random.uniform(*self.waverange,(vectors.shape[0],2))
 
