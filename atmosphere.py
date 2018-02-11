@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 from heatmap import heatmap
 
 class atmosphere:
-    def __init__(self,ray_count=1000,ray_start=[200,0,0],ray_direction=[1,1,0],
+    def __init__(self,ray_count=1000,ray_start=[0,0],ray_direction=[1,1,0],
                     earth_mat=None,atmos_mat=None,earth_surface=None,atmos_surface=None,
                     region_segments=30):
         self.number_rays = ray_count
-        self.ray_start = ray_start
+        self.ray_start = cartesian_coordinates(np.array([ray_start]))[0]
         self.ray_direction = ray_direction
    
         self.earth_mat=earth_mat
@@ -22,8 +22,8 @@ class atmosphere:
         self.earth_primitive=earth_surface
         self.atmos_primitive=atmos_surface
 
-        self.inner_radius = 200
-        self.outer_radius = 220
+        self.inner_radius = 6371
+        self.outer_radius = 6671
 
         self.setup_rays()
         self.setup_surfaces()

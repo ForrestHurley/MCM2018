@@ -38,6 +38,20 @@ def geographic_coordinates(vectors):
     longitude=rad2deg(spherical_coordinates[1])
     return np.array([latitude,longitude]).T  
 
+def cartesian_coordinates(latlongs,radii=None):
+    if radii==None:
+        radii=np.full(latlongs.shape[0],6371)
+    thetas=deg2rad(90-latlongs.T[0])
+    phis=deg2rad(latlongs.T[1])
+    return cartesians_from_vectors(np.array([radii,phis,thetas]).T)
+
+def cartesians_from_vectors(vectors):
+    radii=vectors.T[0]
+    x=radii*np.cos(vectors.T[1])*np.sin(vectors.T[2])
+    y=radii*np.sin(vectors.T[1])*np.sin(vectors.T[2])
+    z=radii*np.cos(vectors.T[2]) 
+    return np.array([x,y,z]).T
+
 def add_convolve(vector):
     return np.add(np.delete(vector,0),np.delete(vector,-1))
 
