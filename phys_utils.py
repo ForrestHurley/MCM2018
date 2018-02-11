@@ -7,10 +7,10 @@
 
 import numpy as np
 import sys
-#from pyiri2016 import IRI2016Profile
+from pyiri2016 import IRI2016Profile
 import math
 from PIL import Image
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 e = 1.6021e-19  # The elementary charge
 m_e = 9.109e-31  # Mass of electron in kg
@@ -423,4 +423,4 @@ if __name__ == "main":
         for lon in range(-180, 180):
             #print("Sunrise:", calculate_time(lat=lat, long=lon), "Sunset:",calculate_time(lat=lat, long=lon, is_rise=False))
             earth[-lat+90][lon+180] = is_day(lat, lon, hour=20, year=2018, month=2, day=11)
-    plt.imshow(earth)
+    #plt.imshow(earth)
