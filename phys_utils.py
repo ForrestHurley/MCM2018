@@ -209,12 +209,12 @@ def virtual_height(lat=0, lon=0, frequency=3e6, theta_i=1,year=2000, month=12, h
         if e_densities[height-90] > f_c**2/81:
             return height-1
 
-for height in range(90, 1000):
-    if (1 - (81*e_densities[height-100]/frequency**2))**0.5 < 0:
-        print("Bug in virtual height. Returning true height.")
+    for height in range(90, 1000):
+        if (1 - (81*e_densities[height-100]/frequency**2))**0.5 < 0:
+            print("Bug in virtual height. Returning true height.")
             return height
 
-return 1000
+    return 1000
 
 
 def refract_waves(rays, normals, theta_i, n_i=1, freq=1e6, altitude=90, lat=0, lon=0, month=12, year=2000, hour=12):
@@ -304,22 +304,19 @@ def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
     else:
         rise_or_set_time = new_day + ( ( 18 - ( long/ 15 ) ) / 24 )
 
-#3- calculate sun mean anamoly
-sun_mean_anomaly = ( 0.9856 * rise_or_set_time ) - 3.289
+    #3- calculate sun mean anamoly
+    sun_mean_anomaly = ( 0.9856 * rise_or_set_time ) - 3.289
     
     #4 calculate true longitude
-    true_long = ( sun_mean_anomaly +
-                 ( 1.916 * math.sin( math.radians( sun_mean_anomaly ) ) ) +
-                 ( 0.020 * math.sin(  2 * math.radians( sun_mean_anomaly ) ) ) +
-                 282.634 )
+    true_long = ( sun_mean_anomaly + ( 1.916 * math.sin( math.radians( sun_mean_anomaly ) ) ) +( 0.020 * math.sin(  2 * math.radians( sun_mean_anomaly ) ) ) + 282.634 )
         
-                 # make sure true_long is within 0, 360
-                 if true_long < 0:
-                     true_long = true_long + 360
-                 elif true_long > 360:
-                     true_long = true_long - 360
-else:
-    true_long = true_long
+    # make sure true_long is within 0, 360
+    if true_long < 0:
+        true_long = true_long + 360
+    elif true_long > 360:
+        true_long = true_long - 360
+    else:
+        true_long = true_long
     
     #5 calculate s_r_a (sun_right_ascenstion)
     s_r_a = math.degrees( math.atan( 0.91764 * math.tan( math.radians( true_long ) ) ) )
@@ -333,7 +330,7 @@ else:
         s_r_a = s_r_a
 
 # s_r_a has to be in the same Quadrant as true_long
-true_long_quad = ( math.floor( true_long / 90 ) ) * 90
+    true_long_quad = ( math.floor( true_long / 90 ) ) * 90
     s_r_a_quad = ( math.floor( s_r_a / 90 ) ) * 90
     s_r_a = s_r_a + ( true_long_quad - s_r_a_quad )
     
@@ -345,17 +342,15 @@ true_long_quad = ( math.floor( true_long / 90 ) ) * 90
     cos_declanation = math.cos( math.asin( sin_declanation ) )
     
     # sun local hour
-    cos_hour = ( math.cos( math.radians( zenith ) ) -
-                ( sin_declanation * math.sin( math.radians ( lat ) ) ) /
-                ( cos_declanation * math.cos( math.radians ( lat ) ) ) )
+    cos_hour = ( math.cos( math.radians( zenith ) ) - ( sin_declanation * math.sin( math.radians ( lat ) ) ) / ( cos_declanation * math.cos( math.radians ( lat ) ) ) )
         
-        
-                # extreme north / south
-                if cos_hour > 1:
-                    return -1
-                # sys.exit()
-elif cos_hour < -1:
-    return -2
+    # extreme north / south
+    if cos_hour > 1:
+        return -1
+    # sys.exit()
+
+    elif cos_hour < -1:
+        return -2
     # sys.exit()
     
     #7- sun/set local time calculations
@@ -364,7 +359,7 @@ elif cos_hour < -1:
     else:
         sun_local_hour = math.degrees( math.acos( cos_hour ) ) / 15
 
-sun_event_time = sun_local_hour + s_r_a - ( 0.06571 * rise_or_set_time ) - 6.622
+    sun_event_time = sun_local_hour + s_r_a - ( 0.06571 * rise_or_set_time ) - 6.622
     
     #final result
     utc_time_zone = long * 24/360
