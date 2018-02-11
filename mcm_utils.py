@@ -19,6 +19,12 @@ def random_removal(probability,values):
     indices = np.where(np.random.rand(values[0].shape[0]) < probability)
     return [val[indices] for val in values]
 
+def lat2theta(latitude):
+    return deg2rad(90-latitude)
+
+def long2theta(longitude):
+    return deg2rad(longitude)
+
 def sphericals_from_vector(vectors):
     r=np.linalg.norm(vectors,axis=1)
     phi=np.arctan2(vectors.T[1],vectors.T[0])
