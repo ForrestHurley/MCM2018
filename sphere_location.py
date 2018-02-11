@@ -1,7 +1,6 @@
 import mcm_utils
 import numpy as np
 import math
-import phys_utils
 import scipy
 from mcm_utils import deg2rad, rad2deg
 from scipy.interpolate import CloughTocher2DInterpolator
@@ -34,53 +33,47 @@ class sphere_coordinates:
 class geocentric_data:
     def convert_lambert(self):
         return np.array([self.longitude, np.sin(deg2rad(np.full(self.latitude.shape,90)-self.latitude))])
-    
-    def __init__(self,data, radius=200):
+    #data must be a sorted array of latitudes, longitudes, and then grid mesh of the coordinates.    
+    def __init__(self,latitudes, longitudes, data, radius=200):
         self.radius=radius
         self.shape=data.shape
-        print(self.shape)
-        self.latitude=data[0]
-        self.longitude=data[1]
-        self.values=data[2]
-        if self.shape[-2]>3:
-            self.auxilary=data[3:]
+        self.latitude=latitudes
+        self.longitude=longitudes
+        self.values=data
         
         self.lambert_data=self.convert_lambert()
         self.lambert_x=self.lambert_data[0]
         self.lambert_y=self.lambert_data[1]
         
-        self.function_interpolator=CloughTocher2DInterpolator(np.array([self.latitude,self.longitude]).T,self.values)
+        coordinates=np.swapaxes(np.array(np.meshgrid(self.latitude,self.longitude)),0,2)        
+        interpshape=(coordinates.shape[0]**2,2)
+        flatshape=(coordinates.shape[0]**2,)
+        cartshape=(coordinates.shape[0]**2,3)
+        self.function_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(self.values,flatshape))
+        phi=deg2rad(self.longitude)
+        theta=deg2rad(90-self.latitude)
 
-        new_data=np.array([data[0],data[1],data[2]])
+        sphere_coordinates=np.meshgrid(theta,phi)
         
-        latsort=new_data[new_data[:,1].argsort()]
-        longsort=new_data[new_data[:,2].argsort()]
+        theta_mesh=sphere_coordinates[0]
+        phi_mesh=sphere_coordinates[1]
         
-        phi=longsort[0]
-        theta=latsort[0]
-    
-        phi=np.squeeze(deg2rad(phi))
-        theta=np.squeeze(deg2rad(theta))
+        sphere_coordinates=np.swapaxes(sphere_coordinates,0,2)
+        
+        sphere_gradient=np.gradient(self.values,math.pi/self.latitude.shape[0],(2*math.pi)/self.longitude.shape[0])
+        
+        partial_theta=np.squeeze(sphere_gradient[0])
+        partial_phi=np.squeeze(sphere_gradient[1])
 
-        indices1 = np.nonzero(np.diff(phi))
-        indices2= np.nonzero(np.diff(theta))
-        partial_phi=np.squeeze(np.divide(np.take(np.diff(longsort[2]),indices1),np.take(np.diff(phi),indices1)))
-        partial_theta=np.squeeze(np.divide(np.take(np.diff(latsort[2]),indices2),np.take(np.diff(theta),indices2)))
+        theta_hat=np.swapaxes(np.array([np.cos(theta_mesh)*np.cos(phi_mesh),np.cos(theta_mesh)*np.sin(phi_mesh),-np.sin(theta_mesh)]),0,2)
+        phi_hat=np.swapaxes(np.array([-np.sin(phi_mesh),np.cos(phi_mesh),np.zeros(phi_mesh.shape)]),0,2)
+        
+        inverse_sine=np.divide(1,np.sin(theta_mesh))
+        term1=partial_theta[:,:,np.newaxis]*theta_hat
+        term2=partial_phi[:,:,np.newaxis]*phi_hat
+        gradients=np.add(term1,inverse_sine[:,:,np.newaxis]*term2)
 
-        phi=np.squeeze(np.take(mcm_utils.add_convolve(phi)/2,indices1))
-        theta=np.squeeze(np.take(mcm_utils.add_convolve(theta)/2,indices2))
-
-        theta_hat=np.squeeze(np.array([np.cos(theta)*np.cos(phi),np.cos(theta)*np.sin(phi),-np.sin(theta)]).T)
-        phi_hat=np.squeeze(np.array([-np.sin(phi),np.cos(phi),np.zeros(phi.shape)]).T)
-
-        inverse_sine=np.divide(1,np.sin(theta))
-        term1=partial_theta[:,np.newaxis]*theta_hat
-        term2=partial_phi[:,np.newaxis]*phi_hat
-        gradients=np.add(term1,inverse_sine[:,np.newaxis]*term2)
-        new_latitude=90-rad2deg(theta)
-        new_longitude=rad2deg(phi)
-
-#        self.gradient_interpolator=CloughTocher2DInterpolator(np.array([new_latitude,new_longitude]).T,gradients)
+        self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
      
         
     def visualize_lambert(self, mapview=False):
@@ -107,13 +100,8 @@ if __name__=='__main__':
     year=2000
     month=12
     hour=5
-    longitudes=np.tile(np.linspace(-180,180,num=20,endpoint=False),(20,1))
-    latitudes=np.tile(np.linspace(-90,90,num=20,endpoint=False).T,(20,1)).T
-    master=np.swapaxes(np.array([longitudes,latitudes]),0,2)
-    narrow=np.reshape(master,(400,2))
-    function= np.vectorize(phys_utils.virtual_height)
-    #result=function(narrow.T[1],narrow.T[0])
-    result=np.full(400,99)
-    data=np.array([narrow.T[1],narrow.T[0],result])
-    constant=geocentric_data(data)
+    longitudes=np.linspace(-180,180,num=20,endpoint=False)
+    latitudes=np.linspace(-90,90,num=20,endpoint=False)
+    data=np.full((20,20),99)
+    constant=geocentric_data(latitudes,longitudes,data)
     constant.visualize_lambert()
