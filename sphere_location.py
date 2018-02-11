@@ -17,6 +17,8 @@ class sphere_coordinates:
         longitudes=np.linspace(0,360,num=self.segments,endpoint=False)
         extended_longitudes=np.tile(longitudes,(self.segments,1))
         sin_latitudes=np.linspace(1,-1,num=self.segments,endpoint=False)
+        self.longitudes=np.linspace(-180,180,num=self.segments,endpoint=True)
+        self.latitudes=rad2deg(np.arcsin(np.linspace(1,-1,num=self.segments,endpoint=True)))
         extended_sin_latitudes=np.tile(sin_latitudes,(self.segments,1)).T
 
         self.upper_right=np.swapaxes(np.array([extended_longitudes,extended_sin_latitudes]),0,2)
@@ -36,6 +38,7 @@ class geocentric_data:
     def convert_lambert(self):
         lambert_coordinate=np.sin(deg2rad(self.latitude))
         return np.array([self.longitude, lambert_coordinate])
+
     #data must be a sorted array of latitudes, longitudes, and then grid mesh of the coordinates.    
     def __init__(self,latitudes, longitudes, data, radius=200):
         self.radius=radius
@@ -77,10 +80,27 @@ class geocentric_data:
         gradients=np.add(term1,inverse_sine[:,:,np.newaxis]*term2)
 
         self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
-     
+        
         
     def visualize_lambert(self, mapview=False):
-        plt.pcolormesh(self.lambert_x,self.lambert_y,self.values)
+        cmap='winter'
+        if mapview:
+            # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
+            # are the lat/lon values of the lower left and upper right corners
+            # of the map.
+            # resolution = 'c' means use crude resolution coastlines.
+            m = Basemap(projection='cea',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c')
+            mapx,mapy=m(self.longitude,self.latitude)
+            m.pcolormesh(mapx,mapy,self.values,cmap=cmap)
+            #m.fillcontinents(color='coral',lake_color='aqua')
+            m.drawcoastlines()
+            # print(mapx)
+            # draw parallels and meridians.
+            #m.drawparallels(np.arange(-90.,91.,30.))
+            #m.drawmeridians(np.arange(-180.,181.,60.))
+            #m.drawmapboundary(fill_color='aqua')
+        else:
+            plt.pcolormesh(self.lambert_x,self.lambert_y,self.values,cmap=cmap)
         plt.show()
 
     def interpolate_data(self, vectors, system='cartesian'):
@@ -101,22 +121,6 @@ class geocentric_data:
         if system=='geographic':
             return self.gradient_interpolator(vector) 
 
-    def draw_map(self):
-        # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
-        # are the lat/lon values of the lower left and upper right corners
-        # of the map.
-        # resolution = 'c' means use crude resolution coastlines.
-        m = Basemap(projection='cea',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c')
-        mapx,mapy=m(self.longitude,self.latitude)
-        m.pcolormesh(mapx,mapy,self.values)
-        #m.fillcontinents(color='coral',lake_color='aqua')
-        m.drawcoastlines()
-       # print(mapx)
-        # draw parallels and meridians.
-        #m.drawparallels(np.arange(-90.,91.,30.))
-        #m.drawmeridians(np.arange(-180.,181.,60.))
-        #m.drawmapboundary(fill_color='aqua')
-        plt.show()
 if __name__=='__main__':
     longitudes=np.linspace(-180,180,num=20,endpoint=False)
     latitudes=np.linspace(-90,90,num=20,endpoint=False)
@@ -131,4 +135,3 @@ if __name__=='__main__':
     constant=geocentric_data(latitudes,longitudes,data)
     maxvector=np.array([20,50])
 #    print(constant.interpolate_gradient(maxvector,system='geographic'))
-    constant.draw_map()

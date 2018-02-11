@@ -100,8 +100,9 @@ class atmosphere:
 
 if __name__=="__main__":
     world = atmosphere()
-    world.simulate(6)
+    world.simulate(15)
     intensity_final=world.heatmap.get_physical_intensity(14)
     np.save('finalstate',intensity_final)
     world.draw_from_log()
-    world.heatmap.visualize_intensities()
+    world.heatmap.visualize_intensities(mapview=True)
+    world.heatmap.visualize_intensities(mapview=False)

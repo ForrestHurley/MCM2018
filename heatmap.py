@@ -1,6 +1,6 @@
 import numpy as np
 import mcm_utils
-from sphere_location import sphere_coordinates
+from sphere_location import sphere_coordinates,geocentric_data
 import matplotlib.pyplot as plt
 
 class heatmap:
@@ -39,8 +39,7 @@ class heatmap:
         else:
             return self.counts_to_intensity(self.intensity[-1])
 
-    def visualize_intensities(self):
-        plt.imshow(self.get_physical_intensity())
-        plt.show() 
-
-
+    def visualize_intensities(self,mapview=False):
+        heatmap_intensities=geocentric_data(self.mapping.latitudes,self.mapping.longitudes,self.get_physical_intensity())
+        heatmap_intensities.visualize_lambert(mapview=mapview)
+        
