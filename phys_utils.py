@@ -76,7 +76,12 @@ def attenuation_constant(eps, wavelength):
 def attenuated_power(distance, alpha, old_power):
     # Computes the attenuated power after traveling through a medium
     # alpha = attenuation constant
-    return old_power**2 / (alpha * distance)
+    return old_power**2 / np.e**(alpha * distance)
+
+
+def attenuated_power_db(distance, alpha):
+    return alpha*distance*8.7
+
 
 def index_reflectance(theta_i, index=1.33):
     # Using Fresnel's equations, we calculate the percentage of light
@@ -103,6 +108,64 @@ def perm_reflectance(theta_i, eps_2, mu_2, eps_1=1.0006*eps_0, mu_1=1.256637e-6)
     R_s = abs( (Z2*cos_i - Z1*cos_t) / (Z2*cos_i + Z1*cos_t) )**2
     R_p = abs( (Z2*cos_t - Z1*cos_i) / (Z2*cos_t + Z1*cos_i) )**2
     return .5*(R_s + R_p)
+
+
+def water_empirical_reflectance(salinity, temp_C=20, theta_i=1, omega=1e6):
+    # Pass in salinity (ppt) and temp (Celsius)
+    conductivity = .18*salinity**.93*(1 + .02*(temp_C - 20))
+    permittivity = 80  # Assumed value
+    eps = permittivity - 1j * conductivity / (omega*eps_0)
+    ind = eps**.5
+
+    return index_reflectance(theta_i, ind)
+
+
+def water_plasma_reflectance(salinity=35, theta_i=1, omega=1e6):
+    # Provide salinity in ppt
+    degree_of_ionization = salinity*2/(salinity*2 + 1000-salinity)
+    
+    # TODO Code below makes assumption that w_0 = 0, but if we observe magnetic effects, this isnt true
+
+    # From from quasi neutrality, we know that average charge density ~ 1, so we define electron density:
+    n_e = degree_of_ionization
+    w_p = np.sqrt((n_e*e**2)/ (eps_0 * m_e))  # The plasma frequency
+    eps = 1 - (w_p**2 / omega**2)
+    ind = eps**.5
+    return index_reflectance(theta_i, ind)
+
+
+def earth_surface_reflectance(ground_type, theta_i, omega):
+    # Relative permeability assumed to be 1. Ground type is a number indexing surface types
+    # Assume a positive time dependence
+    eps = empirical_permittivity(ground_type) - 1j * (empirical_conductivity(ground_type)) / (omega*eps_0)
+    ind = eps**.5
+    return index_reflectance(theta_i, ind)
+
+
+def empirical_conductivity(ground_type):
+    #TODO Use the empirical conductivities I found to determine conductivity
+    return 0
+
+
+def empirical_permittivity(ground_type):
+    #TODO Use the empirical conductivities I found to determine permittivity
+    return 0
+
+
+def loss_tangent(eps_r, eps_i, omega, conductivity):
+    # Pass real and imaginary parts of eps and angular frequency and conductivity
+    return np.atan((omega*eps_i + conductivity)/(omega*eps_r))
+
+
+def loss_tangent_db(length, delta, wavelength):
+    return delta*length*8.7*2*np.pi/wavelength
+
+
+def penetration_depth(wavelength, eps_r, eps_i):
+    coeff = wavelength/(2*np.pi)
+    rest = ( 2/((eps_r**2 + eps_i**2)**.5 - eps_r) )**.5
+    return coeff*rest
+
 
 def electron_density(altitude, lat, lon, year, month, hour):
     altlim = [100., 1000.]
@@ -154,9 +217,14 @@ def virtual_height(lat=0, lon=0, frequency=3e6, theta_i=1,year=2000, month=12, h
     return 1000
 
 
-def data_virtual_height(layer, lat, lon, year, month, hour):
-    iri2016Obj = IRI2016Profile(altlim=altlim, altstp=altstp, lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
-    pass
+def refract_waves(rays, normals, theta_i, n_i=1, freq=1e6, altitude=90, lat=0, lon=0, month=12, year=2000, hour=12):
+    # Add a function to refract waves for curved path model
+    electron_densities = electron_density_profile(lat, lon, year, month, hour)  # Pull this out so we dont query every time
+    electron_density = electron_densities[altitude-90]
+    n = ( 1 - (81*electron_density/freq**2) )**.5
+    theta_r = np.asin(n_i / n * np.sin(theta_i))
+    # Rotate the vectors through an angle of theta_r - theta_i
+    # TODO
 
 
 def pressure(altitude):
@@ -181,24 +249,34 @@ def free_space_loss(freq, distance):
 
 
 def D_layer_loss(freq=1e6, slice_sizes=10, theta_i=1):
+    # FOR TESTING PURPOSES, WE EXPECT FREQUENCIES BELOW 15MHz TO BE VIRTUALLY UNUSABLE
+    # We can get around D layer absorption by sending signals with normal incidence
     percent_remaining = 1
     estimated_N = [1, 10, 40, 300]
     eps_prev = 1
+    total_db_loss = 0
 
     for altitude in range(60, 91, slice_sizes):
         # We need N, omega, v
         N_guess = estimated_N[(altitude-60)//10]
         v = 8.4e7 * pressure(altitude)
         eps = dielectric(N_guess, freq*2*np.pi, v) 
-    
+        alpha = attenuation_constant(eps, 3e8/frequency)
+        theta_i = np.asin(np.real(eps_prev)/np.real(eps) * np.sin(theta_i))
+        length = 1/(np.cos(theta_i)) * slice_sizes * 1000
+        total_db_loss += attenuated_power_db(length, alpha)
+
 
 
 def ionospheric_attenuation(frequency=1e6, theta_i=1, lat=0, lon=0, year=2000, month=12, hour=0, day=15):
+    total_db_loss = 0
     if is_day(lat, lon, day, month, year, hour) == False:
         # Calculate attenuation in D-Layer
-        pass
-    pass
+        total_db_loss += D_layer_loss(freq, 10, theta_i)
         
+    # Calculate loss for other layers
+
+    return total_db_loss
 
 def calculate_time(in_day, in_month, in_year, lat, long, is_rise):
     # @source: [http://williams.best.vwh.net/sunrise_sunset_algorithm.htm][2]
