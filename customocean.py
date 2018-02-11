@@ -92,6 +92,144 @@ class precalculated_waves:
         ax.set_zlim(minT[2],minT[2]+diffT)
         plt.show()
 
+class statsWave:
+
+    def __init__(self):
+        self.scale_factor=0.001
+        self.tile_size=100
+        self.wind_direction=np.array([[2,2]])
+        self.resolution=(128,128)
+
+    def to_world(self,k):
+        k = 2*k - self.resolution
+        k = k *np.pi / self.tile_size
+        return k
+
+    def phillips(self,k):
+        k = self.to_world(k)
+
+        squared = mcm_utils.dot(k,k)
+
+        wind_speed_sqr = mcm_utils.dot(self.wind_direction,self.wind_direction)
+        max_wave = wind_speed_sqr/9.8
+        norm = mcm_utils.normalize(k)
+
+        dot = mcm_utils.dot(norm,mcm_utils.normalize(self.wind_direction))
+
+        result = self.scale_factor*np.exp(-1/(squared*(max_wave**2)))/(squared**2)*(dot**6)
+
+        damping = 0.001
+        ld2 = (max_wave * damping)**2
+        result = result * np.exp(-squared*ld2)
+
+        null_k = np.where(squared < 0.00001)
+
+        result[null_k] = 0
+
+        return result
+
+    def fourier_amplitude(self,k):
+
+        phillips_val = self.phillips(k)
+        divided = np.sqrt(phillips_val/2)
+
+        real = np.random.normal(size=k.shape[0])*divided
+        imaginary = 1j*np.random.normal(size=k.shape[0])*divided
+        #print(divided)
+
+        #return (0.2+0j)*divided
+
+        return real+imaginary
+
+    def __iterate_tiles(self):
+        points = self.grid.reshape(2,self.resolution[0]*self.resolution[1]).T
+        flip_points = -self.grid.reshape(2,self.resolution[0]*self.resolution[1]).T
+
+        amplitudes = self.fourier_amplitude(points)
+        flip_amplitudes = self.fourier_amplitude(flip_points)
+
+        amplitudes += np.conj(flip_amplitudes)
+
+        amplitudes = amplitudes.reshape(self.resolution)
+
+        waves = np.fft.fft2(amplitudes)
+
+        waves[::2,::2] = -waves[::2,::2]
+        waves[1::2,1::2] = -waves[1::2,1::2]
+
+        return np.real(waves)
+   
+    @property
+    def grid(self):
+        try:
+            return self.__grid
+        except AttributeError:
+            x,y = np.arange(self.resolution[0]),np.arange(self.resolution[1])
+            points = np.array(np.meshgrid(x,y))
+            self.__grid = points
+        return self.__grid
+
+    @property
+    def world_grid(self):
+        return np.transpose(self.to_world(np.transpose(self.grid,(1,2,0))),(2,0,1))
+
+    @property
+    def true_world_grid(self):
+        return self.grid*self.tile_size/self.resolution[0]
+    @property
+    def wave_surface(self):
+        try:
+            return self.__wave_surface
+        except AttributeError:
+            self.__wave_surface = self.__iterate_tiles()
+        return self.__wave_surface
+    
+    def numericNormal(self):
+            surface = np.array([*self.world_grid,self.wave_surface])
+            gradient = np.gradient(surface)
+            gradient = [gradient[1][2],gradient[2][2],-1]
+            #gradient.append(np.negative(np.ones(gradient[0].shape)))
+            return np.array(gradient)
+
+    @property
+    def wave_normals(self):
+        try:
+            return self.__wave_normals
+        except AttributeError:
+            self.__wave_normals = self.numericNormal()
+        return self.__wave_normals
+
+    def visualize_wave(self):
+        waves = self.wave_surface
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d', facecolor='#1a5a98')
+        fig.patch.set_color('#1a5a98')
+
+        points = self.true_world_grid
+        normals = self.wave_normals
+
+        colors = np.sqrt(np.sum(np.square(normals[:2]),axis=0))
+        #[print(val[0]) for val in colors]
+        minn, maxx = colors.min(), colors.max()
+        normColors = matplotlib.colors.Normalize(minn,maxx)
+        m = plt.cm.ScalarMappable(norm=normColors,cmap='Reds')
+        m.set_array([])
+        fcolors = m.to_rgba(colors)
+
+        ax.plot_surface(points[0],points[1],waves,facecolors=fcolors,rstride=1,cstride=1)
+        #ax.plot_wireframe(t[0],t[1],t[2], color='white',linewidth=0.5)
+
+        t = [*points,waves]
+        minT = np.min(t,axis=(1,2))
+        diffT = np.max(np.max(t,axis=(1,2))-minT)
+
+        #ax.axis("off")
+        ax.set_xlim(minT[0],minT[0]+diffT)
+        ax.set_ylim(minT[1],minT[1]+diffT)
+        ax.set_zlim(minT[2],minT[2]+diffT)
+        plt.show()
+
 class waves:
 
     def __init__(self,wave_energy=4,wave_count=10,max_shape=0.5):
@@ -391,7 +529,11 @@ class waves:
         plt.show()
 
 if __name__ == "__main__":
-    wave_instance = waves()
+    #wave_instance = waves()
     #vector_list = np.array([[1,0,0],[0,0,-1],[-0.1,0.1,0.5],[1,2,3],[0,1,0]])
     #print(wave_instance.getRandomNormals(vector_list))
-    wave_instance.plot_waves()
+    #wave_instance.plot_waves()
+    new_wave = statsWave()
+    #print(new_wave.fourier_amplitude(np.array([[63,63]])))
+    #print(new_wave.phillips(np.array([[-1,-1]])))
+    new_wave.visualize_wave()
