@@ -45,14 +45,17 @@ class sphere(default_surface):
         self.center = np.array(center)
         self.radius = radius
 
-    def intersection_point(self,ray_origin,ray_direction):
+    def intersection_point(self,ray_origin,ray_direction,radii=None):
+        if radii==None:
+            radii=np.full(ray_origin.shape[0],self.radius)
+        
         difference = ray_origin - self.center
 
         ray_direction = mcm_utils.normalize(ray_direction)
 
         a = mcm_utils.dot(ray_direction,ray_direction)
         b = mcm_utils.dot(ray_direction,difference)
-        c = mcm_utils.dot(difference,difference) - self.radius * self.radius
+        c = mcm_utils.dot(difference,difference) - radii * radii
 
         discriminant = (b**2-a*c)**0.5
 
@@ -77,7 +80,31 @@ class bumpy_sphere(sphere):
 
     def intersection_point(self,ray_origin,ray_direction):
         guess=self.normal_intersection(ray_origin,ray_direction)
-        
+
+class ionosphere(sphere):        
+    def __init__(self,material=mat.default_mat,center=[0,0,0],radius=6671):
+        super().__init__(material,center,radius)
+    
+    def intersect_point(self,ray_origin,ray_direction):
+        earth_radii=np.full(ray_origin.shape,6371)
+        heights=np.full(ray_origin.shape,300)
+        error=100
+
+        while error>2:
+            radii=earth_radii+heights
+            normal_intersection=super().intersection_point(ray_origin,ray_direction,radii)
+            angles=mcm.angle(self.normal_from_surface(normal_intersection),ray_direction)
+            incidence_angle=np.full(angles.shape,0.5*math.pi)-angles
+            new_heights=np.zeros(angles.shape)
+            latlongs=mcm_utils.geographic_coordinates(normal_intersection)
+            latitudes=latlongs[0]
+            longitudes=latlongs[1]
+            for k in range(angles.shape[0]):
+                new_heights[k]=phys_utils.virtual_height(lat=latitudes[k],lon=longitudes[k],theta_i=angles[k])
+            error=np.amax(heights-new_heights)
+            heights=new_heights
+
+        return normal_intersection
 
 class plane(default_surface):
     def __init__(self,material=mat.default_mat,center=[0,0,0],normal=[0,0,1]):
