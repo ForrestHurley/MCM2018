@@ -274,7 +274,10 @@ class statsWave:
         minT = np.min(t,axis=(1,2))
         diffT = np.max(np.max(t,axis=(1,2))-minT)
 
-        ax.axis("off")
+        ax.xaxis.set_ticklabels([])
+        ax.yaxis.set_ticklabels([])
+        ax.zaxis.set_ticklabels([])
+        #ax.axis("off")
         ax.set_xlim(minT[0],minT[0]+diffT)
         ax.set_ylim(minT[1],minT[1]+diffT)
         ax.set_zlim(minT[2],minT[2]+diffT)
@@ -285,7 +288,7 @@ class statsWave:
 
 class waves:
 
-    def __init__(self,wave_energy=4,wave_count=10,max_shape=0.5):
+    def __init__(self,wave_energy=4,wave_count=10,max_shape=0.9):
         self.max_shape = max_shape
         self.wave_count = wave_count
         self.wave_energy = wave_energy
@@ -298,7 +301,7 @@ class waves:
         #self.waveParams=([(0,1,0.6),(.57,0.6,0.5),(1,1.2,0.3)],)
         self.set_random_wave_params()
         
-        self.resolution=40
+        self.resolution=128
         self.__calculated_wave=None
         self.__calculated_norms=None
 
@@ -553,9 +556,9 @@ class waves:
 
         return norms
 
-    def plot_waves(self):
+    def plot_waves(self,bNorms=False,save_name=None):
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d', facecolor='#1a5a98')
+        ax = fig.add_subplot(111, projection='3d', facecolor='#ffffff')
         fig.patch.set_color('#1a5a98')
 
         t,norms,vels = self.calculated_wave,self.calculated_norms,self.calculated_vels
@@ -569,20 +572,28 @@ class waves:
         m.set_array([])
         fcolors = m.to_rgba(colors)
 
-        ax.plot_surface(t[0],t[1],t[2],facecolors=fcolors,rstride=1,cstride=1)
+        if bNorms:
+            ax.plot_surface(t[0],t[1],t[2],facecolors=fcolors,rstride=1,cstride=1)
+        else:
+            ax.plot_surface(t[0],t[1],t[2],rstride=1,cstride=1)
         #ax.plot_wireframe(t[0],t[1],t[2], color='white',linewidth=0.5)
 
         minT = np.min(t,axis=(1,2))
         diffT = np.max(np.max(t,axis=(1,2))-minT)
-        
+       
+        ax.xaxis.set_ticklabels([])
+        ax.yaxis.set_ticklabels([])
+        ax.zaxis.set_ticklabels([])
         #ax.axis("off")
         ax.set_xlim(minT[0],minT[0]+diffT)
         ax.set_ylim(minT[1],minT[1]+diffT)
         ax.set_zlim(minT[2],minT[2]+diffT)
-        plt.show()
+        if save_name is None:
+            plt.show()
+        else:
+            plt.savefig(save_name,dpi=600)
 
 if __name__ == "__main__":
-    #wave_instance = waves()
     #vector_list = np.array([[1,0,0],[0,0,-1],[-0.1,0.1,0.5],[1,2,3],[0,1,0]])
     #print(wave_instance.getRandomNormals(vector_list))
     #wave_instance.plot_waves()
@@ -590,6 +601,10 @@ if __name__ == "__main__":
     #print(new_wave.fourier_amplitude(np.array([[63,63]])))
     #print(new_wave.phillips(np.array([[-1,-1]])))
     for i in range(0,8):
+        #for j in range(1,5):
         new_wave.wind_direction = np.array([[5*i+0.5,5*i+0.5]])
         print(new_wave.wind_direction)
+            #print(0.01+0.05*i,2*j)
+            #new_wave = waves(wave_energy=(0.01+0.05*i),wave_count=2*j)
+            #new_wave.plot_waves(save_name="trochoid_energy_"+str(0.01+0.05*i)+"_count_" + str(2*j) +".pdf")
         new_wave.visualize_wave(save_name="wind_speed_" + str(np.sqrt(2*(5*i+0.5)**2)) + ".pdf")
