@@ -138,6 +138,13 @@ class statsWave:
         self.__resolution = resolution
         self.__recalculate = True
 
+    @property
+    def norms_interpolator(self):
+        if self.__recalculate:
+            reshaped_norms = self.wave_normals.reshape(5,-1)
+            self.__norms_interpolator = LinearNDInterpolator(reshaped_norms[:2].T,reshaped_norms[2:].T,fill_value=0)
+        return self.__norms_interpolator
+
     def to_world(self,k):
         k = 2*k - self.resolution
         k = k *np.pi / self.tile_size
@@ -165,6 +172,9 @@ class statsWave:
         result[null_k] = 0
 
         return result
+
+    def getNormalAtPoints(self,points):
+        return self.norms_interpolator(points)
 
     def fourier_amplitude(self,k):
 
@@ -246,6 +256,12 @@ class statsWave:
             self.__wave_normals = self.numericNormal()
         return self.__wave_normals
 
+    def getRandomNormals(self,vectors):
+        random_locs = np.random.uniform(0,self.resolution,(vectors.shape[0],2))
+
+        norms = self.getNormalAtPoints(random_locs)
+
+        return norms
     def visualize_wave(self,bNormalColor=False,save_name=None):
         waves = self.wave_surface
 

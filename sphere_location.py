@@ -99,11 +99,11 @@ class geocentric_data:
             m = Basemap(projection='cea',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c')
             mapx,mapy=m(self.longitude,self.latitude)
             #print(self.values)
+            m.drawcoastlines(linewidth=0.25)
             m.pcolormesh(mapx,mapy,self.values,
                 norm=colors.SymLogNorm(linthresh=0.03, linscale=0.03,
                 vmin=self.values.min(), vmax=self.values.max()),*args,**vargs)
             #m.fillcontinents(color='coral',lake_color='aqua')
-            m.drawcoastlines()
             # print(mapx)
             # draw parallels and meridians.
             #m.drawparallels(np.arange(-90.,91.,30.))

@@ -45,8 +45,8 @@ class heatmap:
     def binary_map(self,array=None, labeling=True):
         SNR=self.SNR_intensity(array=array)
         binary=np.greater(SNR,10).astype(int)
-        plt.imshow(binary,cmap=plt.cm.gray)
-        plt.show()
+        #plt.imshow(binary,cmap=plt.cm.gray)
+        #plt.show()
         if labeling:
             return sm.label(binary,return_num=True,connectivity=1)
         else:
