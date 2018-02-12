@@ -3,14 +3,14 @@ import sys
 import surface
 import materials as mat
 from mcm_utils import *
-
+import random
 import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from heatmap import heatmap
 
 class atmosphere:
-    def __init__(self,ray_count=10,ray_start=[60,90],ray_direction=[0,0],
+    def __init__(self,ray_count=10,ray_start=[60,90],ray_direction=[90,0],
                     earth_mat=None,atmos_mat=None,earth_surface=None,atmos_surface=None,
                     region_segments=30):
         self.number_rays = ray_count
@@ -55,7 +55,7 @@ class atmosphere:
     def setup_surfaces(self):
         if self.earth_mat is None:
             self.earth_mat=mat.simpleWater()
-            self.earth_mat.water_model.normal_smoothing_factor=0.15
+            self.earth_mat.water_model.normal_smoothing_factor=1000
         if self.atmos_mat is None:
             self.atmos_mat=mat.simpleAtmosphere()
         
@@ -117,15 +117,13 @@ if __name__=="__main__":
     earth_mat = mat.simpleWater()#mat.fresnelWater()
     atmos_mat = mat.simpleAtmosphere()#mat.physicalAtmosphere()
 
-    world = atmosphere(ray_count=1000,region_segments=100, earth_mat=earth_mat,atmos_mat=atmos_mat) #, atmos_surface=ionosphere,earth_surface=bumpy)
-    for i in range(1):
+    for k in range(10):
+        atmos_mat.albedo=np.random.uniform(0.8,1.00001)
+        world = atmosphere(ray_count=1000,region_segments=100, earth_mat=earth_mat,atmos_mat=atmos_mat,ray_direction=[np.random.uniform(0,3),np.random.uniform(0,360)])
         world.simulate(30)
-        print(i)
-        #world.draw_from_log()
-        #np.save('finalstate',intensity_final)
-        data = world.heatmap.visualize_intensities(mapview=True,cmap="Reds")
+            #np.save('finalstate',intensity_final)
+#            data = world.heatmap.visualize_intensities(mapview=True,cmap="Reds")
         num_skips,region_size=world.heatmap.metrics()        
-        print("number of skips",num_skips)
-        print("max region size",region_size)
-        data.savefig("heatmap_time_"+str(i*5+5)+".pdf",dpi=600)
+        print(num_skips,",",region_size)
     #world.heatmap.visualize_intensities(mapview=False)
+    world.draw_from_log()

@@ -45,8 +45,6 @@ class heatmap:
     def binary_map(self,array=None, labeling=True):
         SNR=self.SNR_intensity(array=array)
         binary=np.greater(SNR,10).astype(int)
-        plt.imshow(binary,cmap=plt.cm.gray)
-        plt.show()
         if labeling:
             return sm.label(binary,return_num=True,connectivity=1)
         else:
@@ -56,7 +54,7 @@ class heatmap:
         labels,num_labels=self.binary_map()
         sizes=[]
         num_regions=0
-        for k in (1,num_labels):
+        for k in range(1,num_labels):
             size=np.sum(labels==k)
             sizes.append(size)
             if size>3:

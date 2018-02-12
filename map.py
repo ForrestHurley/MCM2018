@@ -23,8 +23,9 @@ ysample1=np.full(30,-90)
 ysample2=np.full(30,90)
 
 intensity=np.load('finalstate.npy')
-for i in range(30):
-    value=-180+12*i
+n=50
+for i in range(n):
+    value=-180+(360/n)*i
     final_y=np.concatenate((ysample1,ysample2))
     linesx=[value,value]
     linesy=[90,-90]
@@ -32,7 +33,7 @@ for i in range(30):
     m.plot(x,y,marker=None,color='k')
 
 for k in range(30):
-    value=-1+(2/30)*k
+    value=-1+(2/n)*k
     converted=math.asin(value)*(180/math.pi)
     final_y=np.concatenate((ysample1,ysample2))
     linesx=[-180,180]
