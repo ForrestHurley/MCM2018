@@ -83,8 +83,7 @@ class geocentric_data:
         self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
         
         
-    def visualize_lambert(self, mapview=False,log_scale=True):
-        cmap='winter'
+    def visualize_lambert(self,cmap='winter',mapview=False,log_scale=True):
         if mapview:
             # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
             # are the lat/lon values of the lower left and upper right corners
