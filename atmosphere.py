@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import surface
+from surface import bumpy_sphere
 import materials as mat
 from mcm_utils import *
 import random
@@ -8,6 +9,7 @@ import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from heatmap import heatmap
+from test import ground
 import customocean
 
 class atmosphere:
@@ -84,6 +86,7 @@ class atmosphere:
 
     def simulate(self,iterations):
         for i in range(iterations):
+            print(i)
             self.iter += 1
             if self.towards_sky:
                 self.iterate_rays(self.atmos_surface)
@@ -149,7 +152,7 @@ if __name__=="__main__":
     earth_mat.water_model.normal_smoothing_factor=1
     for k in range(10):
         atmos_mat.albedo=np.random.uniform(0.8,1.00001)
-        world = atmosphere(ray_count=1000,region_segments=100, earth_mat=earth_mat,atmos_mat=atmos_mat,ray_direction=[np.random.uniform(0,3),np.random.uniform(0,360)])
+        world = atmosphere(ray_count=1000,region_segments=100,earth_surface=bumpy_sphere,earth_mat=earth_mat,atmos_mat=atmos_mat,ray_direction=[np.random.uniform(0,3),np.random.uniform(0,360)])
         world.simulate(30)
             #np.save('finalstate',intensity_final)
 #            data = world.heatmap.visualize_intensities(mapview=True,cmap="Reds")

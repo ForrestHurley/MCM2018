@@ -82,7 +82,6 @@ class geocentric_data:
             
             cos_theta=np.cos(theta_mesh)
             sin_theta=np.sin(theta_mesh)
-            print(sin_theta)
             cos_phi=np.cos(phi_mesh)
             sin_phi=np.sin(phi_mesh)
 
@@ -95,7 +94,7 @@ class geocentric_data:
             dzdy=sin_theta*sin_phi*dzdr+(cos_theta/(r*sin_phi))*dzdtheta+(sin_theta*cos_phi/r)*dzdphi
 
             gradients=np.array([dzdx,dzdy]) 
-            self.gradient_interpolator=NearestNDInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,interpshape))
+            self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,interpshape))
         
         
     def visualize_lambert(self,mapview=False,log_scale=True,show=True,*args,**vargs):
@@ -134,17 +133,16 @@ class geocentric_data:
         if system=='geographic':
             return self.function_interpolator(vectors)
     
-    def interpolate_gradient(self,vector, system='cartesian'):
+    def interpolate_gradient(self,vectors, system='cartesian'):
         if self.discrete:
             return None        
-
         if system=='cartesian': 
             return self.gradient_interpolator(mcm_utils.geographic_coordinates(vectors))
         if system=='spherical':
             latlongs=np.array([90-rad2deg(vectors[2]),rad2deg(vectors[1])]).T
             return self.gradient_interpolator(latlongs)
         if system=='geographic':
-            return self.gradient_interpolator(vector) 
+            return self.gradient_interpolator(vectors) 
 
 if __name__=='__main__':
     longitudes=np.linspace(-180,180,num=20,endpoint=False)

@@ -2,6 +2,8 @@ import numpy as np
 import math
 
 def normalize(vectors):
+    if len(vectors.shape)<2:
+        return vectors/np.linalg.norm(vectors)
     return vectors/np.linalg.norm(vectors,axis=1)[:,np.newaxis]
 
 def dist(vectsA, vectsB,axis=1):
@@ -11,6 +13,8 @@ def dot(vectsA, vectsB):
     return np.sum(vectsA*vectsB,axis=1)
 
 def magnitude(vectsA):
+    if len(vectsA.shape)<2:
+        return np.linalg.norm(vectsA)
     return np.linalg.norm(vectsA,axis=1)
 
 def angle(vectsA, vectsB):
