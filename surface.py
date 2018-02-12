@@ -17,8 +17,8 @@ class default_surface:
     
     def reflect_rays(self,ray_origins,ray_directions):
         intersections = self.intersection_point(ray_origins,ray_directions)
-        print("printing intersections")
-        print(intersections)
+        #print("printing intersections")
+        #print(intersections)
         world_normals, material_normals = self.normal(ray_directions,intersections)
 
         ray_directions, material_normals ,world_normals, intersections = \
@@ -104,7 +104,9 @@ class bumpy_sphere(sphere):
 
     def normal_from_surface(self,intersection_location):
         vecs=ground.interpolate_gradient(intersection_location)
-        return np.append(vecs.T,np.full(vecs.shape[0],-1)).T
+        norm = np.append(vecs.T,np.full(vecs.shape[0],-1)).reshape(-1,3)
+        print(norm.shape)
+        return norm
 
 class ionosphere(sphere):        
     def __init__(self,material=mat.default_mat,center=[0,0,0],radius=6671):
