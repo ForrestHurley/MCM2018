@@ -5,6 +5,7 @@ import scipy
 from mcm_utils import deg2rad, rad2deg
 from scipy.interpolate import CloughTocher2DInterpolator
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import phys_utils
 from mpl_toolkits.basemap import Basemap
 
@@ -82,7 +83,7 @@ class geocentric_data:
         self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
         
         
-    def visualize_lambert(self, mapview=False):
+    def visualize_lambert(self, mapview=False,log_scale=True):
         cmap='winter'
         if mapview:
             # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
@@ -91,7 +92,10 @@ class geocentric_data:
             # resolution = 'c' means use crude resolution coastlines.
             m = Basemap(projection='cea',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c')
             mapx,mapy=m(self.longitude,self.latitude)
-            m.pcolormesh(mapx,mapy,self.values,cmap=cmap)
+            print(self.values)
+            m.pcolormesh(mapx,mapy,self.values,cmap=cmap,
+                norm=colors.SymLogNorm(linthresh=0.03, linscale=0.03,
+                vmin=self.values.min(), vmax=self.values.max()))
             #m.fillcontinents(color='coral',lake_color='aqua')
             m.drawcoastlines()
             # print(mapx)
@@ -100,7 +104,9 @@ class geocentric_data:
             #m.drawmeridians(np.arange(-180.,181.,60.))
             #m.drawmapboundary(fill_color='aqua')
         else:
-            plt.pcolormesh(self.lambert_x,self.lambert_y,self.values,cmap=cmap)
+            plt.pcolormesh(self.lambert_x,self.lambert_y,self.values,cmap=cmap,
+                norm=colors.SymLogNorm(linthresh=0.03, linscale=0.03,
+                vmin=self.values.min(), vmax=self.values.max()))
         plt.show()
 
     def interpolate_data(self, vectors, system='cartesian'):

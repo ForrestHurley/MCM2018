@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from heatmap import heatmap
 
 class atmosphere:
-    def __init__(self,ray_count=10,ray_start=[0,0],ray_direction=[1,1,0],
+    def __init__(self,ray_count=10,ray_start=[60,0],ray_direction=[1,1,0],
                     earth_mat=None,atmos_mat=None,earth_surface=None,atmos_surface=None,
                     region_segments=30):
         self.number_rays = ray_count
@@ -56,7 +56,7 @@ class atmosphere:
     def setup_surfaces(self):
         if self.earth_mat is None:
             self.earth_mat=mat.simpleWater()
-            self.earth_mat.water_model.normal_smoothing_factor=0.1
+            self.earth_mat.water_model.normal_smoothing_factor=0.15
         if self.atmos_mat is None:
             self.atmos_mat=mat.simpleAtmosphere()
         
@@ -115,10 +115,10 @@ class atmosphere:
         plt.show()
 
 if __name__=="__main__":
-    ionosphere=surface.ionosphere
-    bumpy=surface.bumpy_sphere
-    world = atmosphere(region_segments=60, atmos_surface=ionosphere,earth_surface=bumpy)
-    world.simulate(10)
+    #ionosphere=surface.ionosphere
+    #bumpy=surface.bumpy_sphere
+    world = atmosphere(ray_count=3000,region_segments=60)#, atmos_surface=ionosphere,earth_surface=bumpy)
+    world.simulate(30)
     intensity_final=world.heatmap.get_physical_intensity(14)
     world.draw_from_log()
     np.save('finalstate',intensity_final)
