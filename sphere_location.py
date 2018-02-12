@@ -30,9 +30,9 @@ class sphere_coordinates:
         return self.lat_longs_to_region(latlongs)
 
     def lat_longs_to_region(self,lat_longs):
-        xreg=(lat_longs[1]/360*self.segments).astype(int)
-        yreg=((1-np.sin(mcm_utils.deg2rad(lat_longs[0])))*(self.segments/2)).astype(int)
-        return [xreg, yreg]
+        xreg=((lat_longs[1]+180)/360*self.segments).astype(int)
+        yreg=((np.sin(mcm_utils.deg2rad(90-lat_longs[0])))*(self.segments/2)).astype(int)
+        return [yreg, xreg]
 
 class geocentric_data:
     def convert_lambert(self):
