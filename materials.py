@@ -5,7 +5,7 @@ import mcm_utils
 from phys_utils import *
 
 class default_mat:
-    def __init__(self,albedo=0.9):
+    def __init__(self,albedo=1):
         self.albedo = albedo
 
     def attenuate(self, *args):
@@ -20,18 +20,23 @@ class fresnelMaterial(default_mat):
         self.ref_index = index_of_refraction
 
     def attenuate(self, *args):
-        direction_estimate = args[0][0]  # I feel like this is wrong, but I needed to get an angle of incidence somehow 
-        dir_mag = np.sqrt(direction_estimate.dot(direction_estimate))
-        normal_estimate = args[1][0]
-        normal_mag = np.sqrt(normal_estimate.dot(normal_estimate))
-        theta_i = np.acos(direction_estimate.dot(normal_estimate) / (dir_mag * normal_mag))
-        if theta_i > np.pi/2:  # Just wanted to be sure that the angle of incidence was less than 90deg
-            theta_i = np.pi - theta_i
-        self.albedo = index_reflectance(theta_i, self.ref_index)
-        return super().attenuate(self.albedo,args) 
+        directions = args[0] 
+        dir_mags = np.sqrt(mcm_utils.dot(directions, directions))
+
+        normals = args[1]
+        normal_mags = np.sqrt(mcm_utils.dot(normals, normals))
+
+        thetas = np.acos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
+
+        indices = np.where(thetas > np.pi / 2)
+        thetas[indices] = np.pi - thetas[indices]
+
+        super().albedo = index_reflectance_array(thetas, self.ref_index)
+        return super().attenuate(args) 
+
 
 class simpleWater(default_mat):
-    def __init__(self,turbulence=0.1):
+    def __init__(self,turbulence=0.1, salinity=35, temp=17):
         super().__init__()
         self.water_model = waves()
 
@@ -41,12 +46,14 @@ class simpleWater(default_mat):
     def attenuate(self, *args):
         return super().attenuate(*args)
 
+
 class simpleAtmosphere(default_mat):
     pass
 
+
 class fresnelWater(fresnelMaterial, simpleWater):
-    def __init__(self, index_of_refraction=7.5):
-        super().__init__(index_of_refraction)
+    def __init__(self, index_of_refraction=7.5, salinity=35, temp=17):
+        super().__init__(index_of_refraction, salinity, temp)
     
 
 class fresnelAtmosphere(simpleAtmosphere):
@@ -57,18 +64,56 @@ class fresnelAtmosphere(simpleAtmosphere):
 class physicalWater(simpleWater):
     pass
 
-class physicalAtmosphere(simpleAtmosphere):
-    def __init__(self, time, month):  # Provide time as a military time string for the given location (2:20PM = 1420)
+class physicalAtmosphere(default_mat):
+    def __init__(self, frequency=1e6):  # Provide time as a military time string for the given location (2:20PM = 1420)
                                     # Provide day as a number and use a function to map to other months
         super().__init__()
         self.time = time
+        self.omega = omega
 
     def attenuate(self, *args):
-        pass
-        # Calculate the concentrations of N_2, O_2, 
+        directions = args[0] 
+        dir_mags = np.sqrt(mcm_utils.dot(directions, directions))
 
-class simpleDirt:
-    pass
+        normals = args[1]
+        normal_mags = np.sqrt(mcm_utils.dot(normals, normals))
+
+        thetas = np.acos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
+
+        db_loss = D_layer_loss(freq=self.frequency, slice_sizes=10, thetas=thetas)
+        super().albedo = 10**(-1*db_loss)
+        super().attenuate(args)
+
+
+class simpleDirt(default_mat):
+    def __init__(self):
+        super().__init__()
+
+
+    def normals(self, direction, location):
+        out = np.random.normal(0, .05, 3)
+        out[2] = np.random.normal(1, .05)
+        return out
+    
+
+class fresnelDirt(fresnelMaterial, simpleDirt):
+    def __init__(self, index_of_refraction=.5)
+        super().__init__(index_of_refraction)
+        self.ref_index = index_of_refraction
+
+    def recalculate_indices(self, rays, omega=1e6):
+        indices = []
+        coords = geographic_coordinates(rays)
+        for coord in coords:
+            indices.append(earth_surface_index(coord[0], coord[1], omega))
+        
+        self.ref_index = np.array(indices)
+
+    def attenuate(self, *args):
+        self.recalculate_indices(args[3])
+        super().ref_index = self.ref_index
+        super().attenuate(args)
+
 
 class multiMat(default_mat):
     def __init__(self,mat_list=[default_mat()],mat_region=[[0],[[1,0,0]]]):
