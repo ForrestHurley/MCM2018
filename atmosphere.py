@@ -117,7 +117,7 @@ class atmosphere:
 if __name__=="__main__":
     #ionosphere=surface.ionosphere
     #bumpy=surface.bumpy_sphere
-    world = atmosphere(ray_count=3000,region_segments=120)#, atmos_surface=ionosphere,earth_surface=bumpy)
+    world = atmosphere(ray_count=3000,region_segments=120, earth_mat=landWaterMat(fresnelWater(), fresnelDirt()))#, atmos_surface=ionosphere,earth_surface=bumpy)
     world.simulate(30)
     intensity_final=world.heatmap.get_physical_intensity(14)
     #world.draw_from_log()

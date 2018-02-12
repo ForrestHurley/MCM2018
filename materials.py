@@ -123,7 +123,7 @@ class simpleDirt(default_mat):
     
 
 class fresnelDirt(fresnelMaterial, simpleDirt):
-    def __init__(self, index_of_refraction=.5)
+    def __init__(self, index_of_refraction=.5):
         super().__init__(index_of_refraction)
         self.ref_index = index_of_refraction
 
