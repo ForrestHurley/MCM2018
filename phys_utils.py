@@ -241,7 +241,7 @@ def virtual_height(lat=0, lon=0, frequency=3e6, theta_i=1,year=2000, month=12, h
     iri_data = IRI2016Profile( lat=lat, lon=lon, year=year, month=month, hour=hour, option=1, verbose=False)
     f_c = frequency*np.cos(theta_i)
     e_densities = electron_density_profile(lat, lon, year, month, hour)
-    muf = MUF(max(e_densities), theta_i)
+    muf = MUF(np.amax(e_densities), theta_i)
     
     if frequency > muf:
         print("Frequency greater than MUF")

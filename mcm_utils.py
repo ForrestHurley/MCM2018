@@ -10,6 +10,13 @@ def dist(vectsA, vectsB):
 def dot(vectsA, vectsB):
     return np.sum(vectsA*vectsB,axis=1)
 
+def magnitude(vectsA):
+    return np.linalg.norm(vectsA,axis=1)
+
+def angle(vectsA, vectsB):
+    ang=np.arccos(np.divide(dot(vectsA, vectsB),magnitude(vectsA)*magnitude(vectsB)))
+    return ang
+
 def mirror(rays,normal):
     #https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
     out = rays - 2*np.expand_dims(dot(rays,normal)/dot(normal,normal),axis=1)*normal
