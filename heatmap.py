@@ -53,7 +53,6 @@ class heatmap:
             return binary
 
     def metrics(self):
-        print(self.counts_to_intensity(self.intensity))
         labels,num_labels=self.binary_map()
         sizes=[]
         num_regions=0
@@ -62,29 +61,30 @@ class heatmap:
             sizes.append(size)
             if size>3:
                 num_regions+=1
-        distances=[]
-        cartesians=[]
-        for k in range(num_regions+1):
-            intensities=self.get_physical_intensity(k+1)
-            #geocentric_data(self.mapping.latitudes,self.mapping.longitudes,self.get_physical_intensity(2)).visualize_lambert()
-            binary,num=self.binary_map(array=intensities)
-            indices=np.array(np.nonzero(binary))
-            center=np.flip(np.mean(indices,axis=1),0)
-            center_latlong=np.array([[center[0]*(360/self.segments)-180,(180/math.pi)*np.arcsin(center[1])]])
-            cartesian=mcm_utils.cartesian_coordinates(center_latlong)
-            if k==0:
-                cartesians.append(cartesian)
-                continue
-            angle=mcm_utils.angle(cartesians[-1],cartesian)/(math.pi*2)
-            distance=angle*6371
-            distances.append(distance)
-        
-        print(num_regions,max(sizes))
-        print(distances)
-        plt.imshow(binary,cmap=plt.cm.gray)
-        plt.show()
-        #ret,labels=cv2.connectedComponents(np.greater(SNR,10).astype(int))
-        return 0
+        return num_regions,max(sizes)*(math.pi*6371**2)/self.segments**2
+
+       # distances=[]
+       # cartesians=[]
+       # for k in range(num_regions+1):
+       #     intensities=self.get_physical_intensity(k+1)
+       #     #geocentric_data(self.mapping.latitudes,self.mapping.longitudes,self.get_physical_intensity(2)).visualize_lambert()
+       #     binary,num=self.binary_map(array=intensities)
+       #     indices=np.array(np.nonzero(binary))
+       #     center=np.flip(np.mean(indices,axis=1),0)
+       #     center_latlong=np.array([[center[0]*(360/self.segments)-180,(180/math.pi)*np.arcsin(center[1])]])
+       #     cartesian=mcm_utils.cartesian_coordinates(center_latlong)
+       #     if k==0:
+       #         cartesians.append(cartesian)
+       #         continue
+       #     angle=mcm_utils.angle(cartesians[-1],cartesian)/(math.pi*2)
+       #     distance=angle*6371
+       #     distances.append(distance)
+       # 
+       # print(num_regions,max(sizes))
+       # print(distances)
+       # plt.imshow(binary,cmap=plt.cm.gray)
+       # plt.show()
+       # #ret,labels=cv2.connectedComponents(np.greater(SNR,10).astype(int))
 
     def counts_to_intensity(self,values):
         return np.array(values) / self.initial_ray_count * self.initial_power

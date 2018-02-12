@@ -118,11 +118,14 @@ if __name__=="__main__":
     atmos_mat = mat.simpleAtmosphere()#mat.physicalAtmosphere()
 
     world = atmosphere(ray_count=1000,region_segments=100, earth_mat=earth_mat,atmos_mat=atmos_mat) #, atmos_surface=ionosphere,earth_surface=bumpy)
-    for i in range(6):
-        world.simulate(5)
+    for i in range(1):
+        world.simulate(30)
         print(i)
         #world.draw_from_log()
         #np.save('finalstate',intensity_final)
         data = world.heatmap.visualize_intensities(mapview=True,cmap="Reds")
+        num_skips,region_size=world.heatmap.metrics()        
+        print("number of skips",num_skips)
+        print("max region size",region_size)
         data.savefig("heatmap_time_"+str(i*5+5)+".pdf",dpi=600)
     #world.heatmap.visualize_intensities(mapview=False)
