@@ -15,9 +15,13 @@ from PIL import Image
 e = 1.6021e-19  # The elementary charge
 m_e = 9.109e-31  # Mass of electron in kg
 eps_0 = 8.85418782e-12  # Epsilon naught
-KRe = 8497  # Effective earth radius in km
+Rem = 6371e3  # Effective earth radius in km
+KRe=8497
+temp= 2.4e5
+bandwidth=27e6
 mu_0 = 1.25663706e-6
 k_b = 1.3806485  # The Boltzmann constant
+k_br=1.3806485e-23
 
 MODIS_DATA = Image.open('Datasets/Modis.tif')
 MODIS_DATA = np.array(MODIS_DATA)

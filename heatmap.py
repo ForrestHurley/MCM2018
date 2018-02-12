@@ -2,6 +2,8 @@ import numpy as np
 import mcm_utils
 from sphere_location import sphere_coordinates,geocentric_data
 import matplotlib.pyplot as plt
+import phys_utils as p
+import cv2
 
 class heatmap:
     def __init__(self,ray_count = 100,total_power=100,segments=30):
@@ -28,6 +30,23 @@ class heatmap:
 
     def reset(self):
         self.intensity=[np.zeros((self.segments,self.segments))]
+
+    def SNR_intensity(self):
+        area_region=(p.Rem/self.segments)**2
+        power=self.get_physical_intensity()/area_region
+        noise=p.k_br*p.temp*p.bandwidth
+        
+        SNR=power/noise
+        return SNR
+
+    def binary_map(self):
+        SNR=self.SNR_intensity()
+        binary=np.greater(SNR,10).astype(int)
+
+        plt.imshow(binary,cmap=plt.cm.gray)
+        np.savetxt('binary.csv',SNR,delimiter=',')
+        #ret,labels=cv2.connectedComponents(np.greater(SNR,10).astype(int))
+        return 0
 
     def counts_to_intensity(self,values):
         return values / self.initial_ray_count * self.initial_power

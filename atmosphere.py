@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 from heatmap import heatmap
 
 class atmosphere:
-    def __init__(self,ray_count=10,ray_start=[60,0],ray_direction=[1,1,0],
+    def __init__(self,ray_count=10,ray_start=[60,90],ray_direction=[0,45],
                     earth_mat=None,atmos_mat=None,earth_surface=None,atmos_surface=None,
                     region_segments=30):
         self.number_rays = ray_count
         self.ray_start = cartesian_coordinates(np.array([ray_start]))[0]
-        self.ray_direction = ray_direction
+        self.ray_direction = local_frame_to_cartesian(ray_direction[0],ray_direction[1],ray_start[0],ray_start[1])
    
         self.earth_mat=earth_mat
         self.atmos_mat=atmos_mat
@@ -28,7 +28,7 @@ class atmosphere:
         self.setup_rays()
         self.setup_surfaces()
         
-        self.heatmap=heatmap(segments=region_segments)
+        self.heatmap=heatmap(segments=region_segments,ray_count=self.number_rays)
         self.verbose = True
 
         self.logged_data = []
@@ -120,6 +120,7 @@ if __name__=="__main__":
     world = atmosphere(ray_count=3000,region_segments=60)#, atmos_surface=ionosphere,earth_surface=bumpy)
     world.simulate(30)
     intensity_final=world.heatmap.get_physical_intensity(14)
+    print(world.heatmap.binary_map())
     world.draw_from_log()
     np.save('finalstate',intensity_final)
     world.heatmap.visualize_intensities(mapview=True)

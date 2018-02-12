@@ -32,7 +32,7 @@ class sphere_coordinates:
 
     def lat_longs_to_region(self,lat_longs):
         xreg=((lat_longs[1]+180)/360*self.segments).astype(int)
-        yreg=((np.sin(mcm_utils.deg2rad(90-lat_longs[0])))*(self.segments/2)).astype(int)
+        yreg=((1-np.sin(mcm_utils.deg2rad(lat_longs[0])))*(self.segments/2)).astype(int)
         return [yreg, xreg]
 
 class geocentric_data:
@@ -92,7 +92,7 @@ class geocentric_data:
             # resolution = 'c' means use crude resolution coastlines.
             m = Basemap(projection='cea',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c')
             mapx,mapy=m(self.longitude,self.latitude)
-            print(self.values)
+            np.savetxt('result.csv',self.values,delimiter=',')
             m.pcolormesh(mapx,mapy,self.values,cmap=cmap,
                 norm=colors.SymLogNorm(linthresh=0.03, linscale=0.03,
                 vmin=self.values.min(), vmax=self.values.max()))
