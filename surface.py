@@ -64,10 +64,16 @@ class sphere(default_surface):
 
         discriminant = (b**2-a*c)**0.5
 
-        possible_dist = [-b-discriminant,-b+discriminant]
+        possible_dist = np.array([-b-discriminant,-b+discriminant])
+        is_positive=np.greater(possible_dist,np.zeros(possible_dist.shape))
+        truth=np.equal(is_positive[0],is_positive[1])
         abs_dist = np.abs(possible_dist)
-        dist = np.where(abs_dist[0] < abs_dist[1],possible_dist[0],possible_dist[1])
+        case1_dist = np.where(abs_dist[0] < abs_dist[1],possible_dist[0],possible_dist[1])
 
+        case2_dist = possible_dist[1]
+
+        dist=np.where(truth,case1_dist,case2_dist)
+                
         return ray_origin + dist[:,np.newaxis]*ray_direction
 
     def normal_from_surface(self,intersection_location):
@@ -93,6 +99,7 @@ class bumpy_sphere(sphere):
             error=np.amax(heights-new_heights)
             heights=new_heights
         return normal_intersection
+
 class ionosphere(sphere):        
     def __init__(self,material=mat.default_mat,center=[0,0,0],radius=6671):
         super().__init__(material,center,radius)

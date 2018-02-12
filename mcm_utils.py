@@ -4,8 +4,8 @@ import math
 def normalize(vectors):
     return vectors/np.linalg.norm(vectors,axis=1)[:,np.newaxis]
 
-def dist(vectsA, vectsB):
-    return np.linalg.norm(np.subtract(vectsA, vectsB),axis=1)
+def dist(vectsA, vectsB,axis=1):
+    return np.linalg.norm(np.subtract(vectsA, vectsB),axis=axis)
 
 def dot(vectsA, vectsB):
     return np.sum(vectsA*vectsB,axis=1)
@@ -23,17 +23,16 @@ def mirror(rays,normal):
     return out
 
 def local_frame_to_cartesian(from_horizon,from_north,latitude,longitude):
-    alpha=(math.pi/180)*(90+from_north)
+    alpha=(math.pi/180)*(from_north-90)
     beta=(math.pi/180)*(90-from_horizon)
-
+    
     phi=(math.pi/180)*longitude
     theta=(math.pi/180)*(90-latitude)
 
-    theta_hat=np.array([math.cos(theta)*math.cos(phi),math.cos(theta)*math.sin(phi),math.sin(theta)])
+    theta_hat=np.array([math.cos(theta)*math.cos(phi),math.cos(theta)*math.sin(phi),-math.sin(theta)])
     phi_hat=np.array([-math.sin(phi),math.cos(phi),0])
     r_hat=np.array([math.sin(theta)*math.cos(phi),math.sin(theta)*math.sin(phi),math.cos(theta)])
-
-    return math.cos(alpha)*math.sin(beta)*phi_hat+math.sin(alpha)*math.sin(beta)*theta_hat+math.cos(beta)*phi_hat
+    return math.cos(alpha)*math.sin(beta)*phi_hat+math.sin(alpha)*math.sin(beta)*theta_hat+math.cos(beta)*r_hat
 
 def random_removal(probability,values):
     indices = np.where(np.random.rand(values[0].shape[0]) < probability)
@@ -126,4 +125,6 @@ def orthogonalsFromNormals(normals):#uses nx3 array for normals
     e2 = e2/np.expand_dims(np.linalg.norm(e2,axis=1),axis=-1)
 
     return e1, e2
+
+
 
