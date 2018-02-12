@@ -156,6 +156,7 @@ def water_plasma_index(salinity=35, omega=1e6):
     n_e = degree_of_ionization
     w_p = np.sqrt((n_e*e**2)/ (eps_0 * m_e))  # The plasma frequency
     eps = 1 - (w_p**2 / omega**2)
+    print(eps)
     return eps**.5
 
 def earth_surface_reflectance(lat=0, lon=0, theta_i=1, omega=1e6):
@@ -350,12 +351,11 @@ def D_layer_loss(freq=1e6, slice_sizes=10, thetas=1):
         N_guess = estimated_N[(altitude-60)//10]
         v = 8.4e7 * pressure(altitude)
         eps = dielectric(N_guess, freq*2*np.pi, v)
-        alpha = attenuation_constant(eps, 3e8/frequency)
-        thetas = np.asin(np.real(eps_prev)/np.real(eps) * np.sin(thetas))
+        alpha = attenuation_constant(eps, 3e8/freq)
+        thetas = np.arcsin(np.real(eps_prev)/np.real(eps) * np.sin(thetas))
         length = 1/(np.cos(thetas)) * slice_sizes * 1000
         total_db_loss += attenuated_power_db(length, alpha)
         eps_prev = eps
-
     return total_db_loss
 
 

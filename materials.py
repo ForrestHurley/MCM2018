@@ -62,14 +62,14 @@ class simpleAtmosphere(default_mat):
 
 
 class fresnelWater(fresnelMaterial):
-    def __init__(self, index_of_refraction=7.5, salinity=35, temp=17, omega=1e6):
+    def __init__(self, index_of_refraction=7.5, salinity=35, temp=17, omega=1e7):
         super().__init__(index_of_refraction)
         self.ref_index = index_of_refraction
         self.salinity = salinity
         self.temp = temp
         self.omega = omega
 
-        self.set_plasma()
+        self.set_empirical()
 
     def set_plasma(self):
         self.ref_index = water_plasma_index(self.salinity, self.omega)
@@ -91,7 +91,7 @@ class physicalWater(simpleWater):
     pass
 
 class physicalAtmosphere(default_mat):
-    def __init__(self, frequency=1e6, year=2000, month=12, hour=12, day=1): 
+    def __init__(self, frequency=1e7, year=2000, month=12, hour=12, day=1): 
         super().__init__()
         self.frequency = frequency
         self.year = year
@@ -105,7 +105,7 @@ class physicalAtmosphere(default_mat):
 
 
     def attenuate(self, *args):
-        unchanged_indices = np.where(not self.is_day_ray(args[3]))
+        #unchanged_indices = np.where(not self.is_day_ray(args[3]))
 
         directions = args[0] 
         dir_mags = np.sqrt(mcm_utils.dot(directions, directions))
@@ -116,9 +116,10 @@ class physicalAtmosphere(default_mat):
         thetas = np.arccos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
 
         db_loss = D_layer_loss(freq=self.frequency, slice_sizes=10, thetas=thetas)
-        db_loss[unchanged_indices] = 0
+        #db_loss[unchanged_indices] = 0
         super().set_albedo(10**(-1*db_loss))
-        super().attenuate(*args)
+        return super().attenuate(*args)
+
 
 
     
