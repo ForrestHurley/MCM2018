@@ -56,7 +56,7 @@ class atmosphere:
     def setup_surfaces(self):
         if self.earth_mat is None:
             self.earth_mat=mat.simpleWater()
-            self.earth_mat.water_model.normal_smoothing_factor=1000
+            self.earth_mat.water_model.normal_smoothing_factor=0.151
         if self.atmos_mat is None:
             self.atmos_mat=mat.simpleAtmosphere()
         
@@ -146,6 +146,7 @@ if __name__=="__main__":
     earth_mat = mat.simpleWater()#mat.fresnelWater()
     atmos_mat = mat.simpleAtmosphere()#mat.physicalAtmosphere()
 
+    earth_mat.water_model.normal_smoothing_factor=1
     for k in range(10):
         atmos_mat.albedo=np.random.uniform(0.8,1.00001)
         world = atmosphere(ray_count=1000,region_segments=100, earth_mat=earth_mat,atmos_mat=atmos_mat,ray_direction=[np.random.uniform(0,3),np.random.uniform(0,360)])

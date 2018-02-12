@@ -8,4 +8,4 @@ heights=np.random.rand(100,100)
 
 ground=geocentric_data(latitudes,longitudes,heights)
 
-
+hi=ground.interpolate_gradient(np.array([-60,50]),system='geographic')

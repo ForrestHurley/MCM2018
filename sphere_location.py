@@ -64,6 +64,7 @@ class geocentric_data:
             self.function_interpolator=NearestNDInterpolator(np.reshape(coordinates,interpshape),np.reshape(self.values,flatshape))
 
         if not discrete:
+            r=self.values
             phi=deg2rad(self.longitude)
             theta=deg2rad(90-self.latitude)
 
@@ -76,18 +77,25 @@ class geocentric_data:
 
             sphere_gradient=np.gradient(self.values,math.pi/self.latitude.shape[0],(2*math.pi)/self.longitude.shape[0])
             
-            partial_theta=np.squeeze(sphere_gradient[0])
-            partial_phi=np.squeeze(sphere_gradient[1])
-
-            theta_hat=np.swapaxes(np.array([np.cos(theta_mesh)*np.cos(phi_mesh),np.cos(theta_mesh)*np.sin(phi_mesh),-np.sin(theta_mesh)]),0,2)
-            phi_hat=np.swapaxes(np.array([-np.sin(phi_mesh),np.cos(phi_mesh),np.zeros(phi_mesh.shape)]),0,2)
+            drdtheta=np.squeeze(sphere_gradient[0])
+            drdphi=np.squeeze(sphere_gradient[1])
             
-            inverse_sine=np.divide(1,np.sin(theta_mesh))
-            term1=partial_theta[:,:,np.newaxis]*theta_hat
-            term2=partial_phi[:,:,np.newaxis]*phi_hat
-            gradients=np.add(term1,inverse_sine[:,:,np.newaxis]*term2)
+            cos_theta=np.cos(theta_mesh)
+            sin_theta=np.sin(theta_mesh)
+            print(sin_theta)
+            cos_phi=np.cos(phi_mesh)
+            sin_phi=np.sin(phi_mesh)
 
-            self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
+            dzdr=cos_theta
+            dzdtheta=drdtheta*cos_theta-r*sin_theta
+            dzdphi=drdphi*cos_theta
+
+            dzdx=cos_theta*sin_phi*dzdr-(sin_theta/(r*sin_phi))*dzdtheta+(cos_theta*cos_phi/r)*dzdphi
+
+            dzdy=sin_theta*sin_phi*dzdr+(cos_theta/(r*sin_phi))*dzdtheta+(sin_theta*cos_phi/r)*dzdphi
+
+            gradients=np.array([dzdx,dzdy]) 
+            self.gradient_interpolator=NearestNDInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,interpshape))
         
         
     def visualize_lambert(self,mapview=False,log_scale=True,show=True,*args,**vargs):
