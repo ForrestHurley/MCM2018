@@ -112,19 +112,18 @@ class atmosphere:
         [ax.plot(*vals,color='b',alpha=4/len(data)) for vals in data]
 
         plt.show()
-
 if __name__=="__main__":
-    #ionosphere=surface.ionosphere
-    #bumpy=surface.bumpy_sphere
-    earth_mat = mat.fresnelWater()
-    atmos_mat = mat.physicalAtmosphere()
+	#ionosphere=surface.ionosphere
+	#bumpy=surface.bumpy_sphere
+	earth_mat = mat.fresnelWater()
+	atmos_mat = mat.simpleAtmosphere()#mat.physicalAtmosphere()
 
-    world = atmosphere(ray_count=3000,region_segments=120, earth_mat=earth_mat,atmos_mat=atmos_mat) #, atmos_surface=ionosphere,earth_surface=bumpy)
-    world.simulate(30)
-    intensity_final=world.heatmap.get_physical_intensity(14)
-    
-    world.draw_from_log()
-    world.heatmap.metrics()
-    np.save('finalstate',intensity_final)
-    world.heatmap.visualize_intensities(mapview=True)
-    world.heatmap.visualize_intensities(mapview=False)
+	world = atmosphere(ray_count=1000000,region_segments=1000, earth_mat=earth_mat,atmos_mat=atmos_mat) #, atmos_surface=ionosphere,earth_surface=bumpy)
+	for i in range(6):
+		world.simulate(5)
+		print(i)
+		#world.draw_from_log()
+		#np.save('finalstate',intensity_final)
+		data = world.heatmap.visualize_intensities(mapview=True,cmap="Reds")
+		data.savefig("heatmap_time_"+str(i*5+5)+".pdf",dpi=600)
+	#world.heatmap.visualize_intensities(mapview=False) 
