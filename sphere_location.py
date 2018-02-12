@@ -32,7 +32,7 @@ class sphere_coordinates:
 
     def lat_longs_to_region(self,lat_longs):
         xreg=((lat_longs[1]+180)/360*self.segments).astype(int)
-        yreg=((np.sin(mcm_utils.deg2rad(90-lat_longs[0])))*(self.segments/2)).astype(int)
+        yreg=((1-np.sin(mcm_utils.deg2rad(lat_longs[0])))*(self.segments/2)).astype(int)
         return [yreg, xreg]
 
 class geocentric_data:
@@ -83,8 +83,7 @@ class geocentric_data:
         self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
         
         
-    def visualize_lambert(self, mapview=False,log_scale=True):
-        cmap='winter'
+    def visualize_lambert(self,cmap='winter',mapview=False,log_scale=True):
         if mapview:
             # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
             # are the lat/lon values of the lower left and upper right corners
