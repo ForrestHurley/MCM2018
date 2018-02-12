@@ -1,6 +1,9 @@
 import mcm_utils
 import numpy as np
 import materials as mat
+import math
+import phys_utils
+from test import ground
 
 class default_surface:
     def __init__(self,material=mat.default_mat):
@@ -48,7 +51,7 @@ class sphere(default_surface):
         self.radius = radius
 
     def intersection_point(self,ray_origin,ray_direction,radii=None):
-        if radii==None:
+        if type(radii)==type(None):
             radii=np.full(ray_origin.shape[0],self.radius)
         
         difference = ray_origin - self.center
@@ -74,38 +77,49 @@ class bumpy_sphere(sphere):
     def __init__(self,material=mat.default_mat,center=[0,0,0],radius=1):
         super().__init__(material,center,radius)
 
-    def normal_intersection(self,ray_origin,ray_direction):
-        return super().intersection_point(self,ray_origin,ray_direction)
-
-    def height_of_sphere(self,points):
-        return self.radius+sphericals_from_vectors(points)[1]
-
     def intersection_point(self,ray_origin,ray_direction):
-        guess=self.normal_intersection(ray_origin,ray_direction)
-
+        earth_radii=np.full(ray_origin.shape[0],6371)
+        heights=np.full(ray_origin.shape[0],0)
+        error=100
+        while abs(error)>0.1:
+            radii=earth_radii+heights
+            normal_intersection=super().intersection_point(ray_origin,ray_direction,radii)
+            new_heights=np.zeros(ray_origin.shape[0])
+            latlongs=mcm_utils.geographic_coordinates(normal_intersection).T
+            latitudes=latlongs[0]
+            longitudes=latlongs[1]
+            for k in range(ray_origin.shape[0]):
+                new_heights[k]=ground.function_interpolator(latitudes[k],longitudes[k])
+            error=np.amax(heights-new_heights)
+            heights=new_heights
+        return normal_intersection
 class ionosphere(sphere):        
     def __init__(self,material=mat.default_mat,center=[0,0,0],radius=6671):
         super().__init__(material,center,radius)
     
-    def intersect_point(self,ray_origin,ray_direction):
-        earth_radii=np.full(ray_origin.shape,6371)
-        heights=np.full(ray_origin.shape,300)
+    def intersection_point(self,ray_origin,ray_direction):
+        earth_radii=np.full(ray_origin.shape[0],6371)
+        heights=np.full(ray_origin.shape[0],300)
         error=100
-
         while error>2:
+            print("hi")
             radii=earth_radii+heights
             normal_intersection=super().intersection_point(ray_origin,ray_direction,radii)
-            angles=mcm.angle(self.normal_from_surface(normal_intersection),ray_direction)
-            incidence_angle=np.full(angles.shape,0.5*math.pi)-angles
+            angles=mcm_utils.angle(self.normal_from_surface(normal_intersection),ray_direction)
+            sign=np.sign(mcm_utils.dot(self.normal_from_surface(normal_intersection),ray_direction))
+            incidence_angle=sign*(np.full(angles.shape,0.5*math.pi)-angles)
+            print(mcm_utils.rad2deg(incidence_angle))
             new_heights=np.zeros(angles.shape)
-            latlongs=mcm_utils.geographic_coordinates(normal_intersection)
+            latlongs=mcm_utils.geographic_coordinates(normal_intersection).T
             latitudes=latlongs[0]
             longitudes=latlongs[1]
             for k in range(angles.shape[0]):
                 new_heights[k]=phys_utils.virtual_height(lat=latitudes[k],lon=longitudes[k],theta_i=angles[k])
             error=np.amax(heights-new_heights)
+            print(error)
             heights=new_heights
 
+        print("done")
         return normal_intersection
 
 class plane(default_surface):

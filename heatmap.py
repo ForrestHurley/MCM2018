@@ -37,7 +37,7 @@ class heatmap:
             mean_count = np.mean(self.intensity[-time_steps:],axis=0)
             return self.counts_to_intensity(mean_count)
         else:
-            return self.counts_to_intensity(self.intensity[-1])
+            return np.sum(self.counts_to_intensity(np.array(self.intensity)),axis=0)
 
     def visualize_intensities(self,mapview=False):
         heatmap_intensities=geocentric_data(self.mapping.latitudes,self.mapping.longitudes,self.get_physical_intensity())

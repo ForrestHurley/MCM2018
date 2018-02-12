@@ -10,13 +10,20 @@ import matplotlib.pyplot as plt
 from heatmap import heatmap
 
 class atmosphere:
-    def __init__(self,region_segments=30):
-        self.number_rays = 1000
-        self.ray_start = [200,0,0]
-        self.ray_direction = [1,1,0]
+    def __init__(self,ray_count=10,ray_start=[60,0],ray_direction=[1,1,0],
+                    earth_mat=None,atmos_mat=None,earth_surface=None,atmos_surface=None,
+                    region_segments=30):
+        self.number_rays = ray_count
+        self.ray_start = cartesian_coordinates(np.array([ray_start]))[0]
+        self.ray_direction = ray_direction
    
-        self.inner_radius = 200
-        self.outer_radius = 220
+        self.earth_mat=earth_mat
+        self.atmos_mat=atmos_mat
+        self.earth_primitive=earth_surface
+        self.atmos_primitive=atmos_surface
+
+        self.inner_radius = 6371
+        self.outer_radius = 6671
 
         self.setup_rays()
         self.setup_surfaces()
@@ -47,12 +54,21 @@ class atmosphere:
         self.logged_data.append(self.ray_origins)
 
     def setup_surfaces(self):
-        water=mat.simpleWater()
-        water.water_model.normal_smoothing_factor=0.1
-        air=mat.simpleAtmosphere()
+        if self.earth_mat is None:
+            self.earth_mat=mat.simpleWater()
+            self.earth_mat.water_model.normal_smoothing_factor=0.15
+        if self.atmos_mat is None:
+            self.atmos_mat=mat.simpleAtmosphere()
         
-        self.ground_surface = surface.sphere(material=water,radius=self.inner_radius)
-        self.atmos_surface = surface.sphere(material=air,radius=self.outer_radius)
+        if self.earth_primitive is None:
+            self.earth_primitive = surface.sphere
+        if self.atmos_primitive is None:
+            self.atmos_primitive = surface.sphere
+
+        self.ground_surface = self.earth_primitive(material=self.earth_mat,
+            radius=self.inner_radius)
+        self.atmos_surface = self.atmos_primitive(material=self.atmos_mat,
+            radius=self.outer_radius)
 
         self.iter = 0
 
@@ -99,10 +115,12 @@ class atmosphere:
         plt.show()
 
 if __name__=="__main__":
-    world = atmosphere(region_segments=60)
-    world.simulate(15)
+    #ionosphere=surface.ionosphere
+    #bumpy=surface.bumpy_sphere
+    world = atmosphere(ray_count=3000,region_segments=60)#, atmos_surface=ionosphere,earth_surface=bumpy)
+    world.simulate(30)
     intensity_final=world.heatmap.get_physical_intensity(14)
-    np.save('finalstate',intensity_final)
     world.draw_from_log()
+    np.save('finalstate',intensity_final)
     world.heatmap.visualize_intensities(mapview=True)
     world.heatmap.visualize_intensities(mapview=False)
