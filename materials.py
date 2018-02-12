@@ -81,13 +81,22 @@ class physicalWater(simpleWater):
     pass
 
 class physicalAtmosphere(default_mat):
-    def __init__(self, frequency=1e6):  # Provide time as a military time string for the given location (2:20PM = 1420)
-                                    # Provide day as a number and use a function to map to other months
+    def __init__(self, frequency=1e6, year=2000, month=12, hour=12, day=1): 
         super().__init__()
-        self.time = time
-        self.omega = omega
+        self.frequency = frequency
+        self.year = year
+        self.month = month
+        self.hour = hour
+        self.day = day
+
+    
+    def is_day_ray(self, ray):
+        return is_day(ray[0], ray[1], self.day, self.month, self.year, self.hour)
+
 
     def attenuate(self, *args):
+        unchanged_indices = np.where(not self.is_day_ray(args[3]))
+
         directions = args[0] 
         dir_mags = np.sqrt(mcm_utils.dot(directions, directions))
 
@@ -97,6 +106,7 @@ class physicalAtmosphere(default_mat):
         thetas = np.acos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
 
         db_loss = D_layer_loss(freq=self.frequency, slice_sizes=10, thetas=thetas)
+        db_loss[unchanged_indices] = 0
         super().albedo = 10**(-1*db_loss)
         super().attenuate(args)
 
@@ -129,6 +139,34 @@ class fresnelDirt(fresnelMaterial, simpleDirt):
         self.recalculate_indices(args[3])
         super().ref_index = self.ref_index
         super().attenuate(args)
+
+
+class landWaterMat(default_mat):
+    def __init__(self, water_model, land_model, year=2000, month=12, day=1, hour=12):
+        super().__init__()
+        self.water_model = water_model
+        self.land_model = land_model
+
+        self.year = year
+        self.month = month
+        self.hour = hour
+        self.day = day
+
+
+    def choose_model(self, ray):
+        return is_ground(ray[0], ray[1])
+
+    def attenuate(self, *args):
+        ground_indices = np.where(self.choose_model(args[3]))
+        water_indices = np.where(not self.choose_model(args[3]))
+
+        ground_waves = [val[ground_indices] for val in args]
+        water_waves = [val[water_indices] for val in args]
+        
+        out1 = self.land_model.attenuate(ground_waves)
+        out2 = self.water_model.attenuate(water_waves)
+
+        return np.concatenate(out1, out2)
 
 
 class multiMat(default_mat):
