@@ -22,7 +22,7 @@ def mirror(rays,normal):
     out = rays - 2*np.expand_dims(dot(rays,normal)/dot(normal,normal),axis=1)*normal
     return out
 
-def random_removal(probability,values):
+def random_removal(probability,*values):
     indices = np.where(np.random.rand(values[0].shape[0]) < probability)
     return [val[indices] for val in values]
 

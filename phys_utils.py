@@ -197,7 +197,7 @@ def empirical_permittivity(lat=0, lon=0):
 
     perm_estimates = [80, 30, 30, 30, 30, 30, 20, 20, 15, 15, 15, 15, 15, 3.5, 15, 4, 10]
 
-    return perm_estimate[ground_type]
+    return perm_estimates[ground_type]
 
 
 def get_ground_type(lat=0, lon=0):
@@ -231,6 +231,15 @@ def get_ground_type(lat=0, lon=0):
 
 def is_ground(lat, lon):
     return get_ground_type(lat, lon) != 0
+
+
+def is_ground_array(lats, lons):
+    rets = []
+    for i in range(lats.size):
+        print(lats)
+        rets.append(is_ground_array(lats[i], lons[i]))
+
+    return np.array(rets)
 
 
 def loss_tangent(eps_r, eps_i, omega, conductivity):
@@ -334,7 +343,7 @@ def D_layer_loss(freq=1e6, slice_sizes=10, thetas=1):
     # We can get around D layer absorption by sending signals with normal incidence
     estimated_N = [1, 10, 40, 300]
     eps_prev = 1
-    total_db_loss = np.zeros(len(thetas))
+    total_db_loss = np.zeros(thetas.size)
     
     for altitude in range(60, 91, slice_sizes):
         # We need N, omega, v

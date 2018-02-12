@@ -8,31 +8,39 @@ class default_mat:
     def __init__(self,albedo=1):
         self.albedo = albedo
 
-    def attenuate(self, *args):
-        return mcm_utils.random_removal(self.albedo, args)
+    def attenuate(self,directions, mat_norms, world_norms, intersections):
+        return mcm_utils.random_removal(self.albedo,directions, mat_norms, world_norms, intersections )
 
     def normals(self,direction,location):
         return np.array([*np.zeros((2,location.shape[0])),np.ones(location.shape[0])])
+
+    def set_albedo(self, albedo):
+        self.albedo = albedo
 
 class fresnelMaterial(default_mat):
     def __init__(self,index_of_refraction=1.33):
         super().__init__()
         self.ref_index = index_of_refraction
 
-    def attenuate(self, *args):
-        directions = args[0] 
+    def attenuate(self, directions, mat_norms, world_norms, intersections):
+       
         dir_mags = np.sqrt(mcm_utils.dot(directions, directions))
 
-        normals = args[1]
-        normal_mags = np.sqrt(mcm_utils.dot(normals, normals))
+        normal_mags = np.sqrt(mcm_utils.dot(mat_norms, mat_norms))
 
-        thetas = np.acos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
+        thetas = np.arccos(mcm_utils.dot(directions, mat_norms)/(dir_mags*normal_mags))
 
         indices = np.where(thetas > np.pi / 2)
         thetas[indices] = np.pi - thetas[indices]
 
-        super().albedo = index_reflectance_array(thetas, self.ref_index)
-        return super().attenuate(args) 
+        super().set_albedo(index_reflectance_array(thetas, self.ref_index))
+        b = super().attenuate(directions, mat_norms, world_norms, intersections)
+        return(b)
+    def get_ind(self):
+        return self.ref_index
+
+    def attenuate_ind(self, index):
+        self.ref_index = index
 
 
 class simpleWater(default_mat):
@@ -53,13 +61,15 @@ class simpleAtmosphere(default_mat):
     pass
 
 
-class fresnelWater(fresnelMaterial, simpleWater):
+class fresnelWater(fresnelMaterial):
     def __init__(self, index_of_refraction=7.5, salinity=35, temp=17, omega=1e6):
         super().__init__(index_of_refraction)
         self.ref_index = index_of_refraction
         self.salinity = salinity
         self.temp = temp
         self.omega = omega
+
+        self.set_plasma()
 
     def set_plasma(self):
         self.ref_index = water_plasma_index(self.salinity, self.omega)
@@ -68,8 +78,8 @@ class fresnelWater(fresnelMaterial, simpleWater):
         self.ref_index = water_empirical_index(self.salinity, self.temp, self.omega)
 
     def attenuate(self, *args):
-        super().ref_index = self.ref_index
-        super().attenuate(*args)
+        super().attenuate_ind(self.ref_index)
+        return super().attenuate(*args)
 
 
 class fresnelAtmosphere(simpleAtmosphere):
@@ -103,33 +113,24 @@ class physicalAtmosphere(default_mat):
         normals = args[1]
         normal_mags = np.sqrt(mcm_utils.dot(normals, normals))
 
-        thetas = np.acos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
+        thetas = np.arccos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
 
         db_loss = D_layer_loss(freq=self.frequency, slice_sizes=10, thetas=thetas)
         db_loss[unchanged_indices] = 0
-        super().albedo = 10**(-1*db_loss)
-        super().attenuate(args)
+        super().set_albedo(10**(-1*db_loss))
+        super().attenuate(*args)
 
 
-class simpleDirt(default_mat):
-    def __init__(self):
-        super().__init__()
-
-
-    def normals(self, direction, location):
-        out = np.random.normal(0, .05, 3)
-        out[2] = np.random.normal(1, .05)
-        return out
     
 
-class fresnelDirt(fresnelMaterial, simpleDirt):
+class fresnelDirt(fresnelMaterial):
     def __init__(self, index_of_refraction=.5):
         super().__init__(index_of_refraction)
         self.ref_index = index_of_refraction
 
     def recalculate_indices(self, rays, omega=1e6):
         indices = []
-        coords = geographic_coordinates(rays)
+        coords = mcm_utils.geographic_coordinates(rays)
         for coord in coords:
             indices.append(earth_surface_index(coord[0], coord[1], omega))
         
@@ -137,8 +138,8 @@ class fresnelDirt(fresnelMaterial, simpleDirt):
 
     def attenuate(self, *args):
         self.recalculate_indices(args[3])
-        super().ref_index = self.ref_index
-        super().attenuate(args)
+        super().attenuate_ind(self.ref_index)
+        return super().attenuate(*args)
 
 
 class landWaterMat(default_mat):
@@ -154,7 +155,7 @@ class landWaterMat(default_mat):
 
 
     def choose_model(self, ray):
-        return is_ground(ray[0], ray[1])
+        return is_ground_array(ray[0, :], ray[1, :])
 
     def attenuate(self, *args):
         ground_indices = np.where(self.choose_model(args[3]))
