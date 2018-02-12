@@ -39,6 +39,8 @@ class simpleWater(default_mat):
     def __init__(self,turbulence=0.1, salinity=35, temp=17):
         super().__init__()
         self.water_model = waves()
+        self.salinity = salinity
+        self.temp = temp
 
     def normals(self,direction,location):
         return self.water_model.getRandomNormals(direction).T
@@ -52,9 +54,23 @@ class simpleAtmosphere(default_mat):
 
 
 class fresnelWater(fresnelMaterial, simpleWater):
-    def __init__(self, index_of_refraction=7.5, salinity=35, temp=17):
-        super().__init__(index_of_refraction, salinity, temp)
-    
+    def __init__(self, index_of_refraction=7.5, salinity=35, temp=17, omega=1e6):
+        super().__init__(index_of_refraction)
+        self.ref_index = index_of_refraction
+        self.salinity = salinity
+        self.temp = temp
+        self.omega = omega
+
+    def set_plasma(self):
+        self.ref_index = water_plasma_index(self.salinity, self.omega)
+
+    def set_empirical(self):
+        self.ref_index = water_empirical_index(self.salinity, self.temp, self.omega)
+
+    def attenuate(self, *args):
+        super().ref_index = self.ref_index
+        super().attenuate(*args)
+
 
 class fresnelAtmosphere(simpleAtmosphere):
     def __init__(self, index_of_refraction=0.5):

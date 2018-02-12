@@ -125,14 +125,12 @@ def perm_reflectance(theta_i, eps_2, mu_2, eps_1=1.0006*eps_0, mu_1=1.256637e-6)
     return .5*(R_s + R_p)
 
 
-def water_empirical_reflectance(salinity, temp_C=20, theta_i=1, omega=1e6):
+def water_empirical_index(salinity, temp_C=20, omega=1e6):
     # Pass in salinity (ppt) and temp (Celsius)
     conductivity = .18*salinity**.93*(1 + .02*(temp_C - 20))
     permittivity = 80  # Assumed value
     eps = permittivity - 1j * conductivity / (omega*eps_0)
-    ind = eps**.5
-    
-    return index_reflectance(theta_i, ind)
+    return eps**.5
 
 
 def water_plasma_reflectance(salinity=35, theta_i=1, omega=1e6):
@@ -148,6 +146,17 @@ def water_plasma_reflectance(salinity=35, theta_i=1, omega=1e6):
     ind = eps**.5
     return index_reflectance(theta_i, ind)
 
+def water_plasma_index(salinity=35, omega=1e6):
+    # Provide salinity in ppt
+    degree_of_ionization = salinity*2/(salinity*2 + 1000-salinity)
+    
+    # TODO Code below makes assumption that w_0 = 0, but if we observe magnetic effects, this isnt true
+    
+    # From from quasi neutrality, we know that average charge density ~ 1, so we define electron density:
+    n_e = degree_of_ionization
+    w_p = np.sqrt((n_e*e**2)/ (eps_0 * m_e))  # The plasma frequency
+    eps = 1 - (w_p**2 / omega**2)
+    return eps**.5
 
 def earth_surface_reflectance(lat=0, lon=0, theta_i=1, omega=1e6):
     # Relative permeability assumed to be 1. Ground type is a number indexing surface types
@@ -351,6 +360,7 @@ def ionospheric_attenuation(frequency=1e6, theta_i=1, lat=0, lon=0, year=2000, m
     # Calculate loss for other layers
     
     return total_db_loss
+
 
 def calculate_time(in_day=1, in_month=12, in_year=2000, lat=0, long=0, is_rise=True):
     # @source: [http://williams.best.vwh.net/sunrise_sunset_algorithm.htm][2]
