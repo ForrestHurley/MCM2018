@@ -19,17 +19,11 @@ class default_surface:
         intersections = self.intersection_point(ray_origins,ray_directions)
         world_normals, material_normals = self.normal(ray_directions,intersections)
 
-        print("t")
-        print(ray_directions)
-        #print(self.material.attenuate(ray_directions, material_normals, world_normals, intersections).shape)
-
-        print(material_normals)
         ray_directions, material_normals ,world_normals, intersections = \
             self.material.attenuate(
             ray_directions,material_normals, world_normals,intersections)
         # intersections, world_normals, ray_directions = attenuation(intersections, world_normals, ray_directions)
 
-        print("r")
         new_directions = mcm_utils.mirror(ray_directions,world_normals)
 
         return intersections, new_directions
@@ -129,7 +123,6 @@ class ionosphere(sphere):
             for k in range(angles.shape[0]):
                 new_heights[k]=phys_utils.virtual_height(lat=latitudes[k],lon=longitudes[k],theta_i=angles[k])
             error=np.amax(heights-new_heights)
-            print(error)
             heights=new_heights
 
         print("done")

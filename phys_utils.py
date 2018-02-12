@@ -160,7 +160,6 @@ def water_plasma_index(salinity=35, omega=1e6):
     n_e = degree_of_ionization
     w_p = np.sqrt((n_e*e**2)/ (eps_0 * m_e))  # The plasma frequency
     eps = 1 - (w_p**2 / omega**2)
-    print(eps)
     return eps**.5
 
 def earth_surface_reflectance(lat=0, lon=0, theta_i=1, omega=1e6):

@@ -90,7 +90,7 @@ class geocentric_data:
             self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
         
         
-    def visualize_lambert(self,cmap='winter',mapview=False,log_scale=True):
+    def visualize_lambert(self,mapview=False,log_scale=True,show=True,*args,**vargs):
         if mapview:
             # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
             # are the lat/lon values of the lower left and upper right corners
@@ -98,10 +98,10 @@ class geocentric_data:
             # resolution = 'c' means use crude resolution coastlines.
             m = Basemap(projection='cea',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c')
             mapx,mapy=m(self.longitude,self.latitude)
-            np.savetxt('result.csv',self.values,delimiter=',')
-            m.pcolormesh(mapx,mapy,self.values,cmap='Reds',
+            #print(self.values)
+            m.pcolormesh(mapx,mapy,self.values,
                 norm=colors.SymLogNorm(linthresh=0.03, linscale=0.03,
-                vmin=self.values.min(), vmax=self.values.max()))
+                vmin=self.values.min(), vmax=self.values.max()),*args,**vargs)
             #m.fillcontinents(color='coral',lake_color='aqua')
             m.drawcoastlines()
             # print(mapx)
@@ -112,8 +112,10 @@ class geocentric_data:
         else:
             plt.pcolormesh(self.lambert_x,self.lambert_y,self.values,cmap=cmap,
                 norm=colors.SymLogNorm(linthresh=0.03, linscale=0.03,
-                vmin=self.values.min(), vmax=self.values.max()))
-        plt.show()
+                vmin=self.values.min(), vmax=self.values.max()),*args,**vargs)
+        if show:
+            plt.show()
+        return plt
 
     def interpolate_data(self, vectors, system='cartesian'):
         if system=='cartesian': 
