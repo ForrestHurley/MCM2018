@@ -126,4 +126,3 @@ if __name__=="__main__":
         num_skips,region_size=world.heatmap.metrics()        
         print(num_skips,",",region_size)
     #world.heatmap.visualize_intensities(mapview=False)
-    world.draw_from_log()
