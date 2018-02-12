@@ -34,7 +34,7 @@ def local_frame_to_cartesian(from_horizon,from_north,latitude,longitude):
     r_hat=np.array([math.sin(theta)*math.cos(phi),math.sin(theta)*math.sin(phi),math.cos(theta)])
     return math.cos(alpha)*math.sin(beta)*phi_hat+math.sin(alpha)*math.sin(beta)*theta_hat+math.cos(beta)*r_hat
 
-def random_removal(probability,values):
+def random_removal(probability,*values):
     indices = np.where(np.random.rand(values[0].shape[0]) < probability)
     return [val[indices] for val in values]
 

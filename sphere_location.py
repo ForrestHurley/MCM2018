@@ -4,6 +4,7 @@ import math
 import scipy
 from mcm_utils import deg2rad, rad2deg
 from scipy.interpolate import CloughTocher2DInterpolator
+from scipy.interpolate import NearestNDInterpolator
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import phys_utils
@@ -41,12 +42,13 @@ class geocentric_data:
         return np.array([self.longitude, lambert_coordinate])
 
     #data must be a sorted array of latitudes, longitudes, and then grid mesh of the coordinates.    
-    def __init__(self,latitudes, longitudes, data, radius=200):
+    def __init__(self,latitudes, longitudes, data, radius=200, discrete=False):
         self.radius=radius
         self.shape=data.shape
         self.latitude=latitudes
         self.longitude=longitudes
         self.values=data
+        self.discrete=discrete
         
         self.lambert_data=self.convert_lambert()
         self.lambert_x=self.lambert_data[0]
@@ -56,31 +58,36 @@ class geocentric_data:
         interpshape=(coordinates.shape[0]**2,2)
         flatshape=(coordinates.shape[0]**2,)
         cartshape=(coordinates.shape[0]**2,3)
-        self.function_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(self.values,flatshape))
-        phi=deg2rad(self.longitude)
-        theta=deg2rad(90-self.latitude)
+        if self.discrete:
+            self.function_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(self.values,flatshape))
+        else:
+            self.function_interpolator=NearestNDInterpolator(np.reshape(coordinates,interpshape),np.reshape(self.values,flatshape))
 
-        sphere_coordinates=np.meshgrid(theta,phi)
-        
-        theta_mesh=sphere_coordinates[0]
-        phi_mesh=sphere_coordinates[1]
-        
-        sphere_coordinates=np.swapaxes(sphere_coordinates,0,2)
-        
-        sphere_gradient=np.gradient(self.values,math.pi/self.latitude.shape[0],(2*math.pi)/self.longitude.shape[0])
-        
-        partial_theta=np.squeeze(sphere_gradient[0])
-        partial_phi=np.squeeze(sphere_gradient[1])
+        if not discrete:
+            phi=deg2rad(self.longitude)
+            theta=deg2rad(90-self.latitude)
 
-        theta_hat=np.swapaxes(np.array([np.cos(theta_mesh)*np.cos(phi_mesh),np.cos(theta_mesh)*np.sin(phi_mesh),-np.sin(theta_mesh)]),0,2)
-        phi_hat=np.swapaxes(np.array([-np.sin(phi_mesh),np.cos(phi_mesh),np.zeros(phi_mesh.shape)]),0,2)
-        
-        inverse_sine=np.divide(1,np.sin(theta_mesh))
-        term1=partial_theta[:,:,np.newaxis]*theta_hat
-        term2=partial_phi[:,:,np.newaxis]*phi_hat
-        gradients=np.add(term1,inverse_sine[:,:,np.newaxis]*term2)
+            sphere_coordinates=np.meshgrid(theta,phi)
+            
+            theta_mesh=sphere_coordinates[0]
+            phi_mesh=sphere_coordinates[1]
+            
+            sphere_coordinates=np.swapaxes(sphere_coordinates,0,2)
 
-        self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
+            sphere_gradient=np.gradient(self.values,math.pi/self.latitude.shape[0],(2*math.pi)/self.longitude.shape[0])
+            
+            partial_theta=np.squeeze(sphere_gradient[0])
+            partial_phi=np.squeeze(sphere_gradient[1])
+
+            theta_hat=np.swapaxes(np.array([np.cos(theta_mesh)*np.cos(phi_mesh),np.cos(theta_mesh)*np.sin(phi_mesh),-np.sin(theta_mesh)]),0,2)
+            phi_hat=np.swapaxes(np.array([-np.sin(phi_mesh),np.cos(phi_mesh),np.zeros(phi_mesh.shape)]),0,2)
+            
+            inverse_sine=np.divide(1,np.sin(theta_mesh))
+            term1=partial_theta[:,:,np.newaxis]*theta_hat
+            term2=partial_phi[:,:,np.newaxis]*phi_hat
+            gradients=np.add(term1,inverse_sine[:,:,np.newaxis]*term2)
+
+            self.gradient_interpolator=CloughTocher2DInterpolator(np.reshape(coordinates,interpshape),np.reshape(gradients,cartshape))
         
         
     def visualize_lambert(self,cmap='winter',mapview=False,log_scale=True):
@@ -118,6 +125,9 @@ class geocentric_data:
             return self.function_interpolator(vectors)
     
     def interpolate_gradient(self,vector, system='cartesian'):
+        if self.discrete:
+            return None        
+
         if system=='cartesian': 
             return self.gradient_interpolator(mcm_utils.geographic_coordinates(vectors))
         if system=='spherical':

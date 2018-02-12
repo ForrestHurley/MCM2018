@@ -101,6 +101,17 @@ def index_reflectance(theta_i, index=1.33):
     R_p = abs( (cos_theta_t - index*np.cos(theta_i)) / (cos_theta_t + index*np.cos(theta_t)) )**2
     return .5*(R_s + R_p)
 
+
+def index_reflectance_array(thetas, indices):
+    length = len(thetas)
+    one = np.ones(length)    
+
+    cos_theta_t = ( one - ( (one/indices) * np.sin(thetas))**2 )**0.5
+    R_s = abs( (np.cos(thetas) - indices*cos_theta_t) / (np.cos(thetas) + indices*cos_theta_t) )**2
+    R_p = abs( (cos_theta_t - indices*np.cos(thetas)) / (cos_theta_t + indices*np.cos(thetas)) )**2
+    return .5*(R_s + R_p)
+    
+
 def perm_reflectance(theta_i, eps_2, mu_2, eps_1=1.0006*eps_0, mu_1=1.256637e-6):
     # Still assumes that signal is unpolarized
     # Considers the magnetic properties --> mu !~ mu_0
@@ -118,14 +129,12 @@ def perm_reflectance(theta_i, eps_2, mu_2, eps_1=1.0006*eps_0, mu_1=1.256637e-6)
     return .5*(R_s + R_p)
 
 
-def water_empirical_reflectance(salinity, temp_C=20, theta_i=1, omega=1e6):
+def water_empirical_index(salinity, temp_C=20, omega=1e6):
     # Pass in salinity (ppt) and temp (Celsius)
     conductivity = .18*salinity**.93*(1 + .02*(temp_C - 20))
     permittivity = 80  # Assumed value
     eps = permittivity - 1j * conductivity / (omega*eps_0)
-    ind = eps**.5
-    
-    return index_reflectance(theta_i, ind)
+    return eps**.5
 
 
 def water_plasma_reflectance(salinity=35, theta_i=1, omega=1e6):
@@ -141,26 +150,59 @@ def water_plasma_reflectance(salinity=35, theta_i=1, omega=1e6):
     ind = eps**.5
     return index_reflectance(theta_i, ind)
 
+def water_plasma_index(salinity=35, omega=1e6):
+    # Provide salinity in ppt
+    degree_of_ionization = salinity*2/(salinity*2 + 1000-salinity)
+    
+    # TODO Code below makes assumption that w_0 = 0, but if we observe magnetic effects, this isnt true
+    
+    # From from quasi neutrality, we know that average charge density ~ 1, so we define electron density:
+    n_e = degree_of_ionization
+    w_p = np.sqrt((n_e*e**2)/ (eps_0 * m_e))  # The plasma frequency
+    eps = 1 - (w_p**2 / omega**2)
+    print(eps)
+    return eps**.5
 
-def earth_surface_reflectance(ground_type, theta_i, omega):
+def earth_surface_reflectance(lat=0, lon=0, theta_i=1, omega=1e6):
     # Relative permeability assumed to be 1. Ground type is a number indexing surface types
     # Assume a positive time dependence
-    eps = empirical_permittivity(ground_type) - 1j * (empirical_conductivity(ground_type)) / (omega*eps_0)
+    eps = empirical_permittivity(lat, lon) - 1j * (empirical_conductivity(lat, lon)) / (omega*eps_0)
     ind = eps**.5
     return index_reflectance(theta_i, ind)
 
 
-def empirical_conductivity(ground_type):
+def earth_surface_index(lats, lons, omega=1e6):
+    eps = empirical_permittivity(lats, lons) - 1j * (empirical_conductivity(lats, lons)) / (omega*eps_0)
+    return eps**.5
+    
+
+
+def empirical_conductivity(lat=0, lon=0):
     # Cite the MODIS Data for this
     # Key-values: [0=Water, 1-5=Forest, 6-7=Shrublands, 8-9=Savannas, 10=Grasslands, 11=Wetlands, 12=Croplands, 13=Urban, 14=Cropland, 15=Snow, 16=Barren]    
+    ground_type = get_ground_type(lat, lon)
 
     if ground_type == 254 or ground_type == 255:
         print("Error: Unclassified point in MODIS data set. Considering land to be barren.")
         ground_type = 16
 
-    cond_estimates = [5, ]
+    cond_estimates = [5, .02, .02, .02, .02, .02, .003, .003, .003, .003,  .003, .04, .01, .001, .01, .06, .001]
 
-    return 0
+    return cond_estimates[ground_type]
+
+
+def empirical_permittivity(lat=0, lon=0):
+    # Cite the MODIS Data for this
+    # Key-values: [0=Water, 1-5=Forest, 6-7=Shrublands, 8-9=Savannas, 10=Grasslands, 11=Wetlands, 12=Croplands, 13=Urban, 14=Cropland, 15=Snow, 16=Barren]    
+    ground_type = get_ground_type(lat, lon)
+
+    if ground_type == 254 or ground_type == 255:
+        print("Error: Unclassified point in MODIS data set. Considering land to be barren.")
+        ground_type = 16
+
+    perm_estimates = [80, 30, 30, 30, 30, 30, 20, 20, 15, 15, 15, 15, 15, 3.5, 15, 4, 10]
+
+    return perm_estimates[ground_type]
 
 
 def get_ground_type(lat=0, lon=0):
@@ -196,9 +238,13 @@ def is_ground(lat, lon):
     return get_ground_type(lat, lon) != 0
 
 
-def empirical_permittivity(ground_type):
-    #TODO Use the empirical conductivities I found to determine permittivity
-    return 0
+def is_ground_array(lats, lons):
+    rets = []
+    for i in range(lats.size):
+        print(lats)
+        rets.append(is_ground_array(lats[i], lons[i]))
+
+    return np.array(rets)
 
 
 def loss_tangent(eps_r, eps_i, omega, conductivity):
@@ -297,24 +343,23 @@ def free_space_loss(freq, distance):
     return 27.6 + 20*np.log(freq)/np.log(10) + 20*np.log(distance)/np.log(10)
 
 
-def D_layer_loss(freq=1e6, slice_sizes=10, theta_i=1):
+def D_layer_loss(freq=1e6, slice_sizes=10, thetas=1):
     # FOR TESTING PURPOSES, WE EXPECT FREQUENCIES BELOW 15MHz TO BE VIRTUALLY UNUSABLE
     # We can get around D layer absorption by sending signals with normal incidence
-    percent_remaining = 1
     estimated_N = [1, 10, 40, 300]
     eps_prev = 1
-    total_db_loss = 0
+    total_db_loss = np.zeros(thetas.size)
     
     for altitude in range(60, 91, slice_sizes):
         # We need N, omega, v
         N_guess = estimated_N[(altitude-60)//10]
         v = 8.4e7 * pressure(altitude)
         eps = dielectric(N_guess, freq*2*np.pi, v)
-        alpha = attenuation_constant(eps, 3e8/frequency)
-        theta_i = np.asin(np.real(eps_prev)/np.real(eps) * np.sin(theta_i))
-        length = 1/(np.cos(theta_i)) * slice_sizes * 1000
+        alpha = attenuation_constant(eps, 3e8/freq)
+        thetas = np.arcsin(np.real(eps_prev)/np.real(eps) * np.sin(thetas))
+        length = 1/(np.cos(thetas)) * slice_sizes * 1000
         total_db_loss += attenuated_power_db(length, alpha)
-
+        eps_prev = eps
     return total_db_loss
 
 
@@ -328,6 +373,7 @@ def ionospheric_attenuation(frequency=1e6, theta_i=1, lat=0, lon=0, year=2000, m
     # Calculate loss for other layers
     
     return total_db_loss
+
 
 def calculate_time(in_day=1, in_month=12, in_year=2000, lat=0, long=0, is_rise=True):
     # @source: [http://williams.best.vwh.net/sunrise_sunset_algorithm.htm][2]

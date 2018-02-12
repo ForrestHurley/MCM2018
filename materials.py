@@ -5,35 +5,50 @@ import mcm_utils
 from phys_utils import *
 
 class default_mat:
-    def __init__(self,albedo=0.9):
+    def __init__(self,albedo=1):
         self.albedo = albedo
 
-    def attenuate(self, *args):
-        return mcm_utils.random_removal(self.albedo, args)
+    def attenuate(self,directions, mat_norms, world_norms, intersections):
+        return mcm_utils.random_removal(self.albedo,directions, mat_norms, world_norms, intersections )
 
     def normals(self,direction,location):
         return np.array([*np.zeros((2,location.shape[0])),np.ones(location.shape[0])])
+
+    def set_albedo(self, albedo):
+        self.albedo = albedo
 
 class fresnelMaterial(default_mat):
     def __init__(self,index_of_refraction=1.33):
         super().__init__()
         self.ref_index = index_of_refraction
 
-    def attenuate(self, *args):
-        direction_estimate = args[0][0]  # I feel like this is wrong, but I needed to get an angle of incidence somehow 
-        dir_mag = np.sqrt(direction_estimate.dot(direction_estimate))
-        normal_estimate = args[1][0]
-        normal_mag = np.sqrt(normal_estimate.dot(normal_estimate))
-        theta_i = np.acos(direction_estimate.dot(normal_estimate) / (dir_mag * normal_mag))
-        if theta_i > np.pi/2:  # Just wanted to be sure that the angle of incidence was less than 90deg
-            theta_i = np.pi - theta_i
-        self.albedo = index_reflectance(theta_i, self.ref_index)
-        return super().attenuate(self.albedo,args) 
+    def attenuate(self, directions, mat_norms, world_norms, intersections):
+       
+        dir_mags = np.sqrt(mcm_utils.dot(directions, directions))
+
+        normal_mags = np.sqrt(mcm_utils.dot(mat_norms, mat_norms))
+
+        thetas = np.arccos(mcm_utils.dot(directions, mat_norms)/(dir_mags*normal_mags))
+
+        indices = np.where(thetas > np.pi / 2)
+        thetas[indices] = np.pi - thetas[indices]
+
+        super().set_albedo(index_reflectance_array(thetas, self.ref_index))
+        b = super().attenuate(directions, mat_norms, world_norms, intersections)
+        return(b)
+    def get_ind(self):
+        return self.ref_index
+
+    def attenuate_ind(self, index):
+        self.ref_index = index
+
 
 class simpleWater(default_mat):
-    def __init__(self,turbulence=0.1):
+    def __init__(self,turbulence=0.1, salinity=35, temp=17):
         super().__init__()
         self.water_model = waves()
+        self.salinity = salinity
+        self.temp = temp
 
     def normals(self,direction,location):
         return self.water_model.getRandomNormals(direction).T
@@ -41,13 +56,31 @@ class simpleWater(default_mat):
     def attenuate(self, *args):
         return super().attenuate(*args)
 
+
 class simpleAtmosphere(default_mat):
     pass
 
-class fresnelWater(fresnelMaterial, simpleWater):
-    def __init__(self, index_of_refraction=7.5):
+
+class fresnelWater(fresnelMaterial):
+    def __init__(self, index_of_refraction=7.5, salinity=35, temp=17, omega=1e7):
         super().__init__(index_of_refraction)
-    
+        self.ref_index = index_of_refraction
+        self.salinity = salinity
+        self.temp = temp
+        self.omega = omega
+
+        self.set_empirical()
+
+    def set_plasma(self):
+        self.ref_index = water_plasma_index(self.salinity, self.omega)
+
+    def set_empirical(self):
+        self.ref_index = water_empirical_index(self.salinity, self.temp, self.omega)
+
+    def attenuate(self, *args):
+        super().attenuate_ind(self.ref_index)
+        return super().attenuate(*args)
+
 
 class fresnelAtmosphere(simpleAtmosphere):
     def __init__(self, index_of_refraction=0.5):
@@ -57,18 +90,86 @@ class fresnelAtmosphere(simpleAtmosphere):
 class physicalWater(simpleWater):
     pass
 
-class physicalAtmosphere(simpleAtmosphere):
-    def __init__(self, time, month):  # Provide time as a military time string for the given location (2:20PM = 1420)
-                                    # Provide day as a number and use a function to map to other months
+class physicalAtmosphere(default_mat):
+    def __init__(self, frequency=1e7, year=2000, month=12, hour=12, day=1): 
         super().__init__()
-        self.time = time
+        self.frequency = frequency
+        self.year = year
+        self.month = month
+        self.hour = hour
+        self.day = day
+
+    
+    def is_day_ray(self, ray):
+        return is_day(ray[0], ray[1], self.day, self.month, self.year, self.hour)
+
 
     def attenuate(self, *args):
-        pass
-        # Calculate the concentrations of N_2, O_2, 
+        #unchanged_indices = np.where(not self.is_day_ray(args[3]))
 
-class simpleDirt:
-    pass
+        directions = args[0] 
+        dir_mags = np.sqrt(mcm_utils.dot(directions, directions))
+
+        normals = args[1]
+        normal_mags = np.sqrt(mcm_utils.dot(normals, normals))
+
+        thetas = np.arccos(mcm_utils.dot(directions, normals)/(dir_mags*normal_mags))
+
+        db_loss = D_layer_loss(freq=self.frequency, slice_sizes=10, thetas=thetas)
+        #db_loss[unchanged_indices] = 0
+        super().set_albedo(10**(-1*db_loss))
+        return super().attenuate(*args)
+
+
+
+    
+
+class fresnelDirt(fresnelMaterial):
+    def __init__(self, index_of_refraction=.5):
+        super().__init__(index_of_refraction)
+        self.ref_index = index_of_refraction
+
+    def recalculate_indices(self, rays, omega=1e6):
+        indices = []
+        coords = mcm_utils.geographic_coordinates(rays)
+        for coord in coords:
+            indices.append(earth_surface_index(coord[0], coord[1], omega))
+        
+        self.ref_index = np.array(indices)
+
+    def attenuate(self, *args):
+        self.recalculate_indices(args[3])
+        super().attenuate_ind(self.ref_index)
+        return super().attenuate(*args)
+
+
+class landWaterMat(default_mat):
+    def __init__(self, water_model, land_model, year=2000, month=12, day=1, hour=12):
+        super().__init__()
+        self.water_model = water_model
+        self.land_model = land_model
+
+        self.year = year
+        self.month = month
+        self.hour = hour
+        self.day = day
+
+
+    def choose_model(self, ray):
+        return is_ground_array(ray[0, :], ray[1, :])
+
+    def attenuate(self, *args):
+        ground_indices = np.where(self.choose_model(args[3]))
+        water_indices = np.where(not self.choose_model(args[3]))
+
+        ground_waves = [val[ground_indices] for val in args]
+        water_waves = [val[water_indices] for val in args]
+        
+        out1 = self.land_model.attenuate(ground_waves)
+        out2 = self.water_model.attenuate(water_waves)
+
+        return np.concatenate(out1, out2)
+
 
 class multiMat(default_mat):
     def __init__(self,mat_list=[default_mat()],mat_region=[[0],[[1,0,0]]]):
