@@ -84,7 +84,6 @@ class atmosphere:
     def simulate(self,iterations):
         for i in range(iterations):
             self.iter += 1
-            
             if self.towards_sky:
                 self.heatmap.update_regions(self.ray_origins)
                 self.iterate_rays(self.atmos_surface)
@@ -115,10 +114,10 @@ class atmosphere:
 if __name__=="__main__":
     #ionosphere=surface.ionosphere
     #bumpy=surface.bumpy_sphere
-    earth_mat = mat.fresnelWater()
+    earth_mat = mat.simpleWater()#mat.fresnelWater()
     atmos_mat = mat.simpleAtmosphere()#mat.physicalAtmosphere()
 
-    world = atmosphere(ray_count=1000000,region_segments=1000, earth_mat=earth_mat,atmos_mat=atmos_mat) #, atmos_surface=ionosphere,earth_surface=bumpy)
+    world = atmosphere(ray_count=1000,region_segments=100, earth_mat=earth_mat,atmos_mat=atmos_mat) #, atmos_surface=ionosphere,earth_surface=bumpy)
     for i in range(6):
         world.simulate(5)
         print(i)
